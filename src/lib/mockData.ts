@@ -1,9 +1,9 @@
 export const mockCustomers = [
   {
     id: '1',
-    name: 'สมชาย ใจดี',
+    name: 'ธาดาพงศ์ ศรีลาศักดิ์',
     phone: '0812345678',
-    email: 'somchai@example.com',
+    email: 'tadapong@manee-son.com',
     segment: 'VIP',
     lastInteraction: '2025-11-28',
     totalSpent: 15000,

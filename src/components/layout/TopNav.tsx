@@ -26,8 +26,8 @@ export function TopNav({ onMenuClick }: TopNavProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-      <div className="flex items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-30 w-full border-b border-gray-200/70 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl">
+      <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -37,9 +37,10 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           >
             <Menu className="w-5 h-5" />
           </Button>
-          <div className="hidden lg:block">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {user?.name ? `สวัสดี, ${user.name}` : 'LineBoost SME'}
+          <div className="hidden lg:block leading-tight">
+            <p className="text-sm text-gray-500 dark:text-gray-400">แดชบอร์ดธุรกิจ</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              {user?.name ? `ยินดีต้อนรับ, ${user.name}` : 'LineBoost SME'}
             </h2>
           </div>
         </div>

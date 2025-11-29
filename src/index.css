@@ -63,6 +63,9 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground font-sans text-xl leading-relaxed;
+    background: radial-gradient(circle at 20% 20%, rgba(0, 185, 0, 0.08), transparent 35%),
+      radial-gradient(circle at 80% 0%, rgba(0, 0, 0, 0.05), transparent 30%),
+      linear-gradient(180deg, #f7f9fb 0%, #eef2f6 35%, #e9eef4 100%);
   }
 }

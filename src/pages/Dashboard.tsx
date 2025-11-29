@@ -44,180 +44,268 @@ export function Dashboard() {
     },
   ];
 
-  if (!lineOA.connected) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ยินดีต้อนรับสู่ LineBoost SME</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">เริ่มต้นใช้งานโดยเชื่อมต่อ Line Official Account</p>
-        </div>
+  const renderContent = () => {
+    if (!lineOA.connected) {
+      return (
+        <div className="space-y-5 lg:space-y-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">ยินดีต้อนรับสู่ LineBoost SME</h1>
+            <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">เริ่มต้นใช้งานโดยเชื่อมต่อ Line Official Account</p>
+          </div>
 
-        <Card className="border-2 border-dashed">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 bg-line/10 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-10 h-10 text-line" />
+          <Card className="border-2 border-dashed">
+            <CardHeader className="text-center p-6 lg:p-7">
+              <div className="flex justify-center mb-4">
+                <div className="w-20 h-20 bg-line/10 rounded-full flex items-center justify-center">
+                  <MessageSquare className="w-10 h-10 text-line" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">เชื่อมต่อ Line Official Account</CardTitle>
+              <CardDescription className="text-lg">
+                เชื่อมต่อบัญชี Line OA ของคุณเพื่อเริ่มใช้งาน LineBoost SME
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6 px-6">
+              <Button
+                onClick={() => navigate('/line-setup')}
+                size="lg"
+                className="bg-gradient-to-r from-[#008080] to-[#00a0a0] hover:from-[#007070] hover:to-[#009090] text-base text-white border-none shadow-md shadow-teal-500/30"
+              >
+                เชื่อมต่อ Line OA
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5 lg:space-y-6">
+        <Card className="border-0 bg-gradient-to-r from-white via-emerald-50 to-line/10 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 shadow-xl">
+          <CardContent className="p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-emerald-200/60 dark:ring-emerald-700/50 shadow-md shadow-emerald-500/20 bg-white">
+                    <img
+                      src="/image/logo_mia.jpg"
+                      alt="LineBoost"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">LineBoost Pulse</p>
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">SME Growth Hub</h2>
+                  </div>
+                </div>
+                <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">LineBoost Pulse</p>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white">ภาพรวมธุรกิจ</h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+                  สรุปการเติบโตแบบเรียลไทม์ ดูยอดผู้ติดตาม อัตราตอบกลับ และผลลัพธ์ล่าสุดของแคมเปญ
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={() => navigate('/broadcast')}
+                    size="lg"
+                    className="bg-gradient-to-r from-[#008080] to-[#00a0a0] hover:from-[#007070] hover:to-[#009090] text-base text-white shadow-lg shadow-teal-500/30 border-none"
+                  >
+                    <Send className="w-5 h-5 mr-2" />
+                    ส่งข้อความใหม่
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-base border-emerald-200 dark:border-emerald-800"
+                    onClick={() => navigate('/analytics')}
+                  >
+                    ดูรายงาน
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 min-w-[280px]">
+                <div className="rounded-2xl border border-white/60 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 p-4 shadow-sm">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">ผู้ติดตาม</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {mockAnalytics.totalFollowers.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1">+12.5%</p>
+                </div>
+                <div className="rounded-2xl border border-white/60 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 p-4 shadow-sm">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">อัตราคลิก</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {mockAnalytics.clickRate}%
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1">+3.1%</p>
+                </div>
+                <div className="rounded-2xl border border-white/60 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 p-4 shadow-sm">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">รายได้จาก Line</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    ฿{mockAnalytics.revenue.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1">+15.8%</p>
+                </div>
+                <div className="rounded-2xl border border-white/60 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 p-4 shadow-sm">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">ตอบกลับ</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {lineOA.responseRate || '95'}%
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1">เสถียร</p>
+                </div>
               </div>
             </div>
-            <CardTitle>เชื่อมต่อ Line Official Account</CardTitle>
-            <CardDescription className="text-base">
-              เชื่อมต่อบัญชี Line OA ของคุณเพื่อเริ่มใช้งาน LineBoost SME
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center pb-6">
-            <Button
-              onClick={() => navigate('/line-setup')}
-              size="lg"
-              className="bg-line hover:bg-line-dark"
-            >
-              เชื่อมต่อ Line OA
-            </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ภาพรวม</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">ติดตามผลการดำเนินงานของคุณ</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat) => (
+            <Card
+              key={stat.title}
+              className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm"
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-2 px-5 pt-5">
+                <CardTitle className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                  {stat.title}
+                </CardTitle>
+                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+              </CardHeader>
+              <CardContent className="px-5 pb-5 pt-0">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
+                <div className="flex items-center mt-2 text-base">
+                  <TrendingUp className="w-5 h-5 text-green-600 mr-2" />
+                  <span className="text-green-600 font-medium">{stat.change}</span>
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">จากเดือนที่แล้ว</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-        <Button onClick={() => navigate('/broadcast')} className="bg-line hover:bg-line-dark">
-          <Send className="w-4 h-4 mr-2" />
-          ส่งข้อความใหม่
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
+            <CardHeader className="p-5">
+              <CardTitle className="text-2xl">Line OA ที่เชื่อมต่อ</CardTitle>
+              <CardDescription className="text-lg">ข้อมูลบัญชี Line Official Account</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
-              <div className="flex items-center mt-2 text-sm">
-                <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-                <span className="text-green-600 font-medium">{stat.change}</span>
-                <span className="text-gray-500 dark:text-gray-400 ml-1">จากเดือนที่แล้ว</span>
+            <CardContent className="px-5 pb-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">ชื่อบัญชี</span>
+                  <span className="font-semibold text-lg">{lineOA.name || 'ร้านค้าของฉัน'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">ID</span>
+                  <span className="font-semibold text-lg">{lineOA.id || '@myshop'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">ผู้ติดตาม</span>
+                  <span className="font-semibold text-lg">{lineOA.followers?.toLocaleString() || '12,547'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">อัตราตอบกลับ</span>
+                  <span className="font-semibold text-lg">{lineOA.responseRate || '95'}%</span>
+                </div>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Line OA ที่เชื่อมต่อ</CardTitle>
-            <CardDescription>ข้อมูลบัญชี Line Official Account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ชื่อบัญชี</span>
-                <span className="font-medium">{lineOA.name || 'ร้านค้าของฉัน'}</span>
+          <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
+            <CardHeader className="p-5">
+              <CardTitle className="text-2xl">แพ็คเกจปัจจุบัน</CardTitle>
+              <CardDescription className="text-lg">รายละเอียดแพ็คเกจของคุณ</CardDescription>
+            </CardHeader>
+            <CardContent className="px-5 pb-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">แพ็คเกจ</span>
+                  <span className="font-bold text-line text-lg">
+                    {user?.tier === 'starter' && 'Starter'}
+                    {user?.tier === 'growth' && 'Growth'}
+                    {user?.tier === 'enterprise' && 'Enterprise'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">ข้อความคงเหลือ</span>
+                  <span className="font-semibold text-lg">
+                    {user?.tier === 'starter' ? '350/500' : 'ไม่จำกัด'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-base text-gray-600 dark:text-gray-400">AI Generation</span>
+                  <span className="font-semibold text-lg">
+                    {user?.tier === 'starter' ? '5/10' : user?.tier === 'growth' ? '78/100' : 'ไม่จำกัด'}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-base"
+                  onClick={() => navigate('/settings')}
+                >
+                  อัพเกรดแพ็คเกจ
+                </Button>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ID</span>
-                <span className="font-medium">{lineOA.id || '@myshop'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ผู้ติดตาม</span>
-                <span className="font-medium">{lineOA.followers?.toLocaleString() || '12,547'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">อัตราตอบกลับ</span>
-                <span className="font-medium">{lineOA.responseRate || '95'}%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>แพ็คเกจปัจจุบัน</CardTitle>
-            <CardDescription>รายละเอียดแพ็คเกจของคุณ</CardDescription>
+        <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
+          <CardHeader className="p-5">
+            <CardTitle className="text-2xl">เริ่มต้นอย่างรวดเร็ว</CardTitle>
+            <CardDescription className="text-lg">ฟีเจอร์หลักที่คุณควรลองใช้</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">แพ็คเกจ</span>
-                <span className="font-bold text-line">
-                  {user?.tier === 'starter' && 'Starter'}
-                  {user?.tier === 'growth' && 'Growth'}
-                  {user?.tier === 'enterprise' && 'Enterprise'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ข้อความคงเหลือ</span>
-                <span className="font-medium">
-                  {user?.tier === 'starter' ? '350/500' : 'ไม่จำกัด'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">AI Generation</span>
-                <span className="font-medium">
-                  {user?.tier === 'starter' ? '5/10' : user?.tier === 'growth' ? '78/100' : 'ไม่จำกัด'}
-                </span>
-              </div>
+          <CardContent className="px-5 pb-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Button
                 variant="outline"
-                className="w-full"
-                onClick={() => navigate('/settings')}
+                size="lg"
+                className="h-auto py-5 px-6 flex flex-col items-center gap-3 text-lg"
+                onClick={() => navigate('/broadcast')}
               >
-                อัพเกรดแพ็คเกจ
+                <Send className="w-7 h-7 text-line" />
+                <span className="font-medium text-lg">ส่งข้อความ</span>
+                <span className="text-sm text-gray-500">แบรอดแคสต์ถึงลูกค้า</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-auto py-5 px-6 flex flex-col items-center gap-3 text-lg"
+                onClick={() => navigate('/analytics')}
+              >
+                <TrendingUp className="w-7 h-7 text-line" />
+                <span className="font-medium text-lg">ดูรายงาน</span>
+                <span className="text-sm text-gray-500">วิเคราะห์ข้อมูล</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-auto py-5 px-6 flex flex-col items-center gap-3 text-lg"
+                onClick={() => navigate('/customers')}
+              >
+                <Users className="w-7 h-7 text-line" />
+                <span className="font-medium text-lg">จัดการลูกค้า</span>
+                <span className="text-sm text-gray-500">แบ่งกลุ่มลูกค้า</span>
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+    );
+  };
 
-      <Card>
-        <CardHeader>
-          <CardTitle>เริ่มต้นอย่างรวดเร็ว</CardTitle>
-          <CardDescription>ฟีเจอร์หลักที่คุณควรลองใช้</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/broadcast')}
-            >
-              <Send className="w-6 h-6 text-line" />
-              <span className="font-medium">ส่งข้อความ</span>
-              <span className="text-xs text-gray-500">แบรอดแคสต์ถึงลูกค้า</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/analytics')}
-            >
-              <TrendingUp className="w-6 h-6 text-line" />
-              <span className="font-medium">ดูรายงาน</span>
-              <span className="text-xs text-gray-500">วิเคราะห์ข้อมูล</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/customers')}
-            >
-              <Users className="w-6 h-6 text-line" />
-              <span className="font-medium">จัดการลูกค้า</span>
-              <span className="text-xs text-gray-500">แบ่งกลุ่มลูกค้า</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+  return (
+    <div className="relative">
+      <div className="absolute inset-0 pointer-events-none select-none opacity-10 flex items-center justify-center">
+        <img
+          src="/image/logo_mia.jpg"
+          alt="LineBoost watermark"
+          className="w-[120vw] max-w-none object-contain"
+        />
+      </div>
+      <div className="relative">
+        {renderContent()}
+      </div>
     </div>
   );
 }

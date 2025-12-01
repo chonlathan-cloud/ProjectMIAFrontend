@@ -1,13 +1,57 @@
-import { Users, Send, MousePointerClick, DollarSign, TrendingUp, MessageSquare } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import {
+  Users,
+  Send,
+  MousePointerClick,
+  DollarSign,
+  TrendingUp,
+  MessageSquare,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { mockAnalytics } from '@/lib/mockData';
+import { getMe } from '@/lib/api';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user, lineOA } = useStore();
+
+  const [me, setMe] = useState<any | null>(null);
+  const [meError, setMeError] = useState<string | null>(null);
+  const [meLoading, setMeLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    // ยังไม่มี user จาก Firebase → ยังไม่ต้องเรียก backend
+    if (!user) {
+      setMe(null);
+      setMeError(null);
+      setMeLoading(false);
+      return;
+    }
+
+    setMeLoading(true);
+    getMe()
+      .then((data) => {
+        setMe(data);
+        setMeError(null);
+      })
+      .catch((err) => {
+        console.error('getMe error:', err);
+        setMeError(err.message || 'Failed to load backend auth status');
+        setMe(null);
+      })
+      .finally(() => {
+        setMeLoading(false);
+      });
+  }, [user]);
 
   const stats = [
     {
@@ -44,13 +88,71 @@ export function Dashboard() {
     },
   ];
 
+  // สถานะไฟจราจรของ backend
+  let statusColor = 'bg-gray-400';
+  let statusText = 'รอการเข้าสู่ระบบ...';
+  let statusDetail: string | null = null;
+
+  if (!user) {
+    statusColor = 'bg-gray-400';
+    statusText = 'รอการเข้าสู่ระบบ...';
+  } else if (meLoading) {
+    statusColor = 'bg-amber-400';
+    statusText = 'กำลังเชื่อมต่อ Backend...';
+  } else if (meError) {
+    statusColor = 'bg-red-500';
+    statusText = 'เชื่อมต่อ Backend ผิดพลาด';
+    statusDetail = meError;
+  } else if (me) {
+    statusColor = 'bg-emerald-500';
+    statusText = 'เชื่อมต่อ Backend แล้ว (Protected)';
+  }
+
+  const backendStatus = (
+    <Card className="mb-4 border border-emerald-200/60 dark:border-emerald-800/70 bg-emerald-50/50 dark:bg-emerald-950/40">
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-200">
+              System Status
+            </CardTitle>
+            <CardDescription className="text-xs">
+              สถานะการเชื่อมต่อ Backend (Auth + API)
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={`inline-flex h-2.5 w-2.5 rounded-full shadow-sm ${statusColor}`}
+            />
+            <span className="text-[11px] font-medium text-emerald-900 dark:text-emerald-100">
+              {statusText}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      {statusDetail && (
+        <CardContent className="px-4 pb-3">
+          <p className="text-[11px] text-red-500">
+            {statusDetail}
+          </p>
+        </CardContent>
+      )}
+    </Card>
+  );
+
   const renderContent = () => {
     if (!lineOA.connected) {
       return (
         <div className="space-y-5 lg:space-y-6">
+          {backendStatus}
+
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">ยินดีต้อนรับสู่ LineBoost SME</h1>
-            <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">เริ่มต้นใช้งานโดยเชื่อมต่อ Line Official Account</p>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+              ยินดีต้อนรับสู่ LineBoost SME
+            </h1>
+            <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">
+              เริ่มต้นใช้งานโดยเชื่อมต่อ Line Official Account
+            </p>
           </div>
 
           <Card className="border-2 border-dashed">
@@ -81,6 +183,8 @@ export function Dashboard() {
 
     return (
       <div className="space-y-5 lg:space-y-6">
+        {backendStatus}
+
         <Card className="border-0 bg-gradient-to-r from-white via-emerald-50 to-line/10 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 shadow-xl">
           <CardContent className="p-6 lg:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -94,11 +198,17 @@ export function Dashboard() {
                     />
                   </div>
                   <div>
-                    <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">LineBoost Pulse</p>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">SME Growth Hub</h2>
+                    <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                      LineBoost Pulse
+                    </p>
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                      SME Growth Hub
+                    </h2>
                   </div>
                 </div>
-                <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">LineBoost Pulse</p>
+                <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                  LineBoost Pulse
+                </p>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white">ภาพรวมธุรกิจ</h1>
                 <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
                   สรุปการเติบโตแบบเรียลไทม์ ดูยอดผู้ติดตาม อัตราตอบกลับ และผลลัพธ์ล่าสุดของแคมเปญ
@@ -200,11 +310,15 @@ export function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-base text-gray-600 dark:text-gray-400">ผู้ติดตาม</span>
-                  <span className="font-semibold text-lg">{lineOA.followers?.toLocaleString() || '12,547'}</span>
+                  <span className="font-semibold text-lg">
+                    {lineOA.followers?.toLocaleString() || '12,547'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-base text-gray-600 dark:text-gray-400">อัตราตอบกลับ</span>
-                  <span className="font-semibold text-lg">{lineOA.responseRate || '95'}%</span>
+                  <span className="font-semibold text-lg">
+                    {lineOA.responseRate || '95'}%
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -234,7 +348,11 @@ export function Dashboard() {
                 <div className="flex items-center justify-between">
                   <span className="text-base text-gray-600 dark:text-gray-400">AI Generation</span>
                   <span className="font-semibold text-lg">
-                    {user?.tier === 'starter' ? '5/10' : user?.tier === 'growth' ? '78/100' : 'ไม่จำกัด'}
+                    {user?.tier === 'starter'
+                      ? '5/10'
+                      : user?.tier === 'growth'
+                      ? '78/100'
+                      : 'ไม่จำกัด'}
                   </span>
                 </div>
                 <Button

@@ -1,8 +1,8 @@
-import path from 'path';
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+const path = require('path');
+const react = require('@vitejs/plugin-react');
 
-export default defineConfig({
+/** @type {import('vite').UserConfig} */
+module.exports = {
   cacheDir: './.vite-cache',
   plugins: [react()],
   resolve: {
@@ -13,4 +13,4 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-});
+};

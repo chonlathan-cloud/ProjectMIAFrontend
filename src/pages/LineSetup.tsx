@@ -1,31 +1,39 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Check, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
+import { authedJson } from '@/lib/api';
 
 export function LineSetup() {
   const [step, setStep] = useState(1);
   const [accountName, setAccountName] = useState('');
   const [accountId, setAccountId] = useState('');
-  const { setLineOA } = useStore();
-  const navigate = useNavigate();
+  const [connecting, setConnecting] = useState(false);
 
-  const handleConnect = () => {
-    setLineOA({
-      connected: true,
-      name: accountName || 'ร้านค้าของฉัน',
-      id: accountId || '@myshop',
-      followers: 12547,
-      responseRate: 95,
-    });
+  const handleConnect = async () => {
+    try {
+      setConnecting(true);
+      const res = await authedJson<{
+        data?: { loginUrl?: string; state?: string };
+        message?: string;
+      }>('/api/line/connect', { method: 'POST' });
 
-    toast.success('เชื่อมต่อ Line Official Account สำเร็จ!');
-    navigate('/dashboard');
+      const loginUrl = res?.data?.loginUrl;
+      if (!loginUrl) {
+        throw new Error(res?.message || 'ไม่พบ loginUrl จากเซิร์ฟเวอร์');
+      }
+
+      toast.success('กำลังพาไปเชื่อมต่อ LINE...');
+      window.location.href = loginUrl;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'เชื่อมต่อ LINE ไม่สำเร็จ';
+      toast.error(message);
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const steps = [
@@ -71,7 +79,9 @@ export function LineSetup() {
                   ทำตามขั้นตอนแบบเป็นลำดับเพื่อให้บัญชี Line OA เชื่อมกับ LineBoost อย่างปลอดภัย และเริ่มใช้งานได้ทันที
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button size="lg">เริ่มเชื่อมต่อ</Button>
+                  <Button size="lg" onClick={handleConnect} disabled={connecting}>
+                    {connecting ? 'กำลังเชื่อมต่อ...' : 'เริ่มเชื่อมต่อผ่าน LINE'}
+                  </Button>
                   <Button variant="outline" size="lg" onClick={() => setStep(2)} className="text-base">
                     ดูวิธีสแกน QR
                   </Button>

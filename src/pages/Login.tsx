@@ -6,25 +6,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStore } from '@/store/useStore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 export function Login() {
   const [email, setEmail] = useState('demo@lineboost.com');
   const [password, setPassword] = useState('demo1234');
+  const [loading, setLoading] = useState(false);
   const { setUser } = useStore();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setUser({
-      id: '1',
-      name: 'สมชาย ธุรกิจดี',
-      email: email,
-      tier: 'growth',
-      avatar: undefined,
-    });
+    try {
+      setLoading(true);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const user = credential.user;
 
-    navigate('/dashboard');
+      setUser({
+        id: user.uid,
+        name: user.displayName || user.email || 'LineBoost User',
+        email: user.email || email,
+        tier: 'growth',
+        avatar: user.photoURL || undefined,
+      });
+
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error('เข้าสู่ระบบไม่สำเร็จ ตรวจสอบอีเมล/รหัสผ่าน');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,8 +82,8 @@ export function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-line hover:bg-line-dark">
-              เข้าสู่ระบบ
+            <Button type="submit" className="w-full bg-line hover:bg-line-dark" disabled={loading}>
+              {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </Button>
           </form>
 

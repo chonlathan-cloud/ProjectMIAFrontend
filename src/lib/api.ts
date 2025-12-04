@@ -1,6 +1,10 @@
+// src/lib/api.ts
 import { auth } from './firebase';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:3000';
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:3000';
+
+// -------------------- core helpers --------------------
 
 async function getIdToken(): Promise<string> {
   const user = auth.currentUser;
@@ -36,14 +40,23 @@ async function authedFetch(path: string, options: RequestInit = {}) {
   return response.json();
 }
 
-export async function authedJson<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+export async function authedJson<T = any>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
   return authedFetch(path, options) as Promise<T>;
 }
 
-export async function createLineConnect(): Promise<{ loginUrl: string; state: string }> {
+// -------------------- LINE connect / callback --------------------
+
+export async function createLineConnect(): Promise<{
+  loginUrl: string;
+  state: string;
+}> {
   const data = await authedFetch('/api/line/connect', {
     method: 'POST',
   });
+  // backend ของเราห่อเป็น { success, message, data: { loginUrl, state } }
   return data.data;
 }
 
@@ -54,8 +67,54 @@ export async function completeLineCallback(code: string, state: string) {
   });
 }
 
-// src/lib/api.ts (ต่อจากโค้ดที่คุณส่งมา)
+// -------------------- backend auth debug --------------------
 
-export async function getMe(): Promise<{ success: boolean; message: string; user: any }> {
+export async function getMe(): Promise<{
+  success: boolean;
+  message: string;
+  user: any;
+}> {
   return authedJson('/api/auth/me');
+}
+
+// -------------------- LINE status --------------------
+
+export type LineStatusResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    connected: boolean;
+    lineAccountId?: string;
+    lineUserId?: string;
+    displayName?: string;
+    pictureUrl?: string;
+  };
+};
+
+export async function getLineStatus(): Promise<LineStatusResponse> {
+  return authedJson('/api/line/status');
+}
+
+// -------------------- recent messages --------------------
+
+export type RecentMessage = {
+  id: string;
+  type: string; // 'message' | 'reply' | 'follow' | ... (ยืดหยุ่นเป็น string ไปก่อน)
+  text: string | null;
+  isFromUser: boolean;
+  timestamp: string;
+  fromUserId?: string | null;
+  toUserId?: string | null;
+};
+
+export type RecentMessagesResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    items: RecentMessage[];
+  };
+};
+
+export async function getRecentMessages(): Promise<RecentMessagesResponse> {
+  return authedJson('/api/dashboard/recent-messages');
 }

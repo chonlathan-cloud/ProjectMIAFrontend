@@ -6,6 +6,7 @@ import {
   DollarSign,
   TrendingUp,
   MessageSquare,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Card,
@@ -18,7 +19,14 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { mockAnalytics } from '@/lib/mockData';
-import { getMe } from '@/lib/api';
+import {
+  getMe,
+  getLineStatus,
+  type LineStatusResponse,
+  getRecentMessages,
+  type RecentMessage,
+} from '@/lib/api';
+import { FirestoreDebug } from '@/components/FirestoreDebug';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -28,15 +36,48 @@ export function Dashboard() {
   const [meError, setMeError] = useState<string | null>(null);
   const [meLoading, setMeLoading] = useState<boolean>(false);
 
+  const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
+  const [lineStatusError, setLineStatusError] = useState<string | null>(null);
+  const [lineStatusLoading, setLineStatusLoading] = useState<boolean>(false);
+
+  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
+  const [recentMessagesLoading, setRecentMessagesLoading] = useState(false);
+  const [recentMessagesError, setRecentMessagesError] = useState<string | null>(null);
+
+  // helper: โหลด recent messages (ใช้ทั้งตอน mount + ปุ่มรีเฟรช)
+  const loadRecentMessages = async () => {
+    try {
+      setRecentMessagesLoading(true);
+      setRecentMessagesError(null);
+      const res = await getRecentMessages();
+      setRecentMessages(res.data.items || []);
+    } catch (err: any) {
+      console.error('getRecentMessages error:', err);
+      setRecentMessagesError(err.message || 'Failed to load recent messages');
+      setRecentMessages([]);
+    } finally {
+      setRecentMessagesLoading(false);
+    }
+  };
+
+  // โหลด status + recent messages เมื่อมี user
   useEffect(() => {
-    // ยังไม่มี user จาก Firebase → ยังไม่ต้องเรียก backend
     if (!user) {
       setMe(null);
       setMeError(null);
       setMeLoading(false);
+
+      setLineStatus(null);
+      setLineStatusError(null);
+      setLineStatusLoading(false);
+
+      setRecentMessages([]);
+      setRecentMessagesError(null);
+      setRecentMessagesLoading(false);
       return;
     }
 
+    // backend auth
     setMeLoading(true);
     getMe()
       .then((data) => {
@@ -51,6 +92,26 @@ export function Dashboard() {
       .finally(() => {
         setMeLoading(false);
       });
+
+    // line status
+    setLineStatusLoading(true);
+    getLineStatus()
+      .then((res) => {
+        setLineStatus(res.data);
+        setLineStatusError(null);
+      })
+      .catch((err) => {
+        console.error('getLineStatus error:', err);
+        setLineStatusError(err.message || 'Failed to load LINE status');
+        setLineStatus(null);
+      })
+      .finally(() => {
+        setLineStatusLoading(false);
+      });
+
+    // recent messages
+    loadRecentMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const stats = [
@@ -132,16 +193,68 @@ export function Dashboard() {
       </CardHeader>
       {statusDetail && (
         <CardContent className="px-4 pb-3">
-          <p className="text-[11px] text-red-500">
-            {statusDetail}
-          </p>
+          <p className="text-[11px] text-red-500">{statusDetail}</p>
         </CardContent>
       )}
     </Card>
   );
 
+  const renderRecentMessages = () => {
+    if (recentMessagesLoading) {
+      return (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          กำลังโหลดข้อความล่าสุด...
+        </p>
+      );
+    }
+
+    if (recentMessagesError) {
+      return (
+        <p className="text-sm text-red-500">
+          {recentMessagesError}
+        </p>
+      );
+    }
+
+    if (!recentMessages.length) {
+      return (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          ยังไม่มีข้อความจากลูกค้าในช่วงนี้
+        </p>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {recentMessages.slice(0, 5).map((msg) => (
+          <div
+            key={msg.id}
+            className="flex items-start justify-between gap-3 border-b last:border-b-0 border-gray-100 dark:border-gray-800 pb-2"
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100">
+                  {msg.isFromUser ? 'ลูกค้า' : 'บอท'}
+                </span>
+                <span className="text-[11px] text-gray-400">
+                  {new Date(msg.timestamp).toLocaleString('th-TH')}
+                </span>
+              </div>
+              <p className="text-sm mt-1 text-gray-800 dark:text-gray-100 break-words">
+                {msg.text || '(ไม่มีข้อความ)'}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderContent = () => {
-    if (!lineOA.connected) {
+    // พิจารณาจาก backend เป็นหลัก ถ้าไม่มีให้ fallback มาใช้ store เดิม
+    const isLineConnected = lineStatus?.connected ?? lineOA.connected;
+
+    if (!isLineConnected) {
       return (
         <div className="space-y-5 lg:space-y-6">
           {backendStatus}
@@ -185,6 +298,7 @@ export function Dashboard() {
       <div className="space-y-5 lg:space-y-6">
         {backendStatus}
 
+        {/* Hero + KPI */}
         <Card className="border-0 bg-gradient-to-r from-white via-emerald-50 to-line/10 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 shadow-xl">
           <CardContent className="p-6 lg:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -266,6 +380,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* KPI cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <Card
@@ -292,11 +407,14 @@ export function Dashboard() {
           ))}
         </div>
 
+        {/* ข้อมูล OA + ข้อความล่าสุด */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
             <CardHeader className="p-5">
               <CardTitle className="text-2xl">Line OA ที่เชื่อมต่อ</CardTitle>
-              <CardDescription className="text-lg">ข้อมูลบัญชี Line Official Account</CardDescription>
+              <CardDescription className="text-lg">
+                ข้อมูลบัญชี Line Official Account
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="space-y-4">
@@ -325,49 +443,31 @@ export function Dashboard() {
           </Card>
 
           <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
-            <CardHeader className="p-5">
-              <CardTitle className="text-2xl">แพ็คเกจปัจจุบัน</CardTitle>
-              <CardDescription className="text-lg">รายละเอียดแพ็คเกจของคุณ</CardDescription>
+            <CardHeader className="p-5 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">ข้อความล่าสุดจาก LINE</CardTitle>
+                <CardDescription className="text-lg">
+                  ดู history ล่าสุดที่ลูกค้าทักเข้ามาและบอทตอบกลับ
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadRecentMessages}
+                disabled={recentMessagesLoading}
+                className="text-xs gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                {recentMessagesLoading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              </Button>
             </CardHeader>
             <CardContent className="px-5 pb-5">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-base text-gray-600 dark:text-gray-400">แพ็คเกจ</span>
-                  <span className="font-bold text-line text-lg">
-                    {user?.tier === 'starter' && 'Starter'}
-                    {user?.tier === 'growth' && 'Growth'}
-                    {user?.tier === 'enterprise' && 'Enterprise'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-base text-gray-600 dark:text-gray-400">ข้อความคงเหลือ</span>
-                  <span className="font-semibold text-lg">
-                    {user?.tier === 'starter' ? '350/500' : 'ไม่จำกัด'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-base text-gray-600 dark:text-gray-400">AI Generation</span>
-                  <span className="font-semibold text-lg">
-                    {user?.tier === 'starter'
-                      ? '5/10'
-                      : user?.tier === 'growth'
-                      ? '78/100'
-                      : 'ไม่จำกัด'}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-base"
-                  onClick={() => navigate('/settings')}
-                >
-                  อัพเกรดแพ็คเกจ
-                </Button>
-              </div>
+              {renderRecentMessages()}
             </CardContent>
           </Card>
         </div>
 
+        {/* Quick start */}
         <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
           <CardHeader className="p-5">
             <CardTitle className="text-2xl">เริ่มต้นอย่างรวดเร็ว</CardTitle>
@@ -414,6 +514,8 @@ export function Dashboard() {
 
   return (
     <div className="relative">
+      <FirestoreDebug />
+
       <div className="absolute inset-0 pointer-events-none select-none opacity-10 flex items-center justify-center">
         <img
           src="/image/logo_mia.jpg"

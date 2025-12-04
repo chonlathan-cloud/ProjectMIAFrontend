@@ -29,7 +29,7 @@ import {
   querystringDecode,
   registerVersion,
   updateEmulatorBanner
-} from "./chunk-R4LCW3YI.js";
+} from "./chunk-DEPKGBUF.js";
 import {
   __rest
 } from "./chunk-JMGR4S6A.js";

@@ -31,30 +31,30 @@
     --radius: 0.5rem;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
+    --background: 215 30% 8%;
+    --foreground: 210 20% 90%;
+    --card: 215 28% 11%;
+    --card-foreground: 210 20% 92%;
+    --popover: 215 28% 11%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 144 70% 48%;
+    --primary-foreground: 220 30% 10%;
+    --secondary: 220 22% 18%;
+    --secondary-foreground: 210 20% 92%;
+    --muted: 220 22% 18%;
+    --muted-foreground: 210 15% 68%;
+    --accent: 200 40% 22%;
+    --accent-foreground: 210 20% 92%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 18% 22%;
+    --input: 220 18% 22%;
+    --ring: 144 70% 48%;
+    --chart-1: 144 70% 48%;
+    --chart-2: 200 65% 55%;
+    --chart-3: 35 85% 60%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-5: 340 72% 62%;
   }
 }
 
@@ -63,9 +63,14 @@
     @apply border-border;
   }
   body {
-    @apply text-foreground font-sans text-xl leading-relaxed;
+    @apply text-foreground font-sans text-base;
     background: radial-gradient(circle at 20% 20%, rgba(0, 185, 0, 0.08), transparent 35%),
       radial-gradient(circle at 80% 0%, rgba(0, 0, 0, 0.05), transparent 30%),
       linear-gradient(180deg, #f7f9fb 0%, #eef2f6 35%, #e9eef4 100%);
+  }
+  .dark body {
+    background: radial-gradient(circle at 25% 20%, rgba(0, 185, 0, 0.12), transparent 35%),
+      radial-gradient(circle at 75% 10%, rgba(32, 94, 196, 0.12), transparent 30%),
+      linear-gradient(180deg, #0b1621 0%, #0e1a27 40%, #0f1f2e 100%);
   }
 }

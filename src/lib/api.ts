@@ -118,3 +118,7 @@ export type RecentMessagesResponse = {
 export async function getRecentMessages(): Promise<RecentMessagesResponse> {
   return authedJson('/api/dashboard/recent-messages');
 }
+
+export async function getInboxCustomers(storeId: string) {
+  return authedJson(`/api/inbox/customers?storeId=${storeId}`);
+}

@@ -2,27 +2,31 @@
 import {
   Anchor,
   Arrow,
-  Combination_default,
   Content,
+  Root2,
+  createCollection,
+  createPopperScope,
+  useDirection
+} from "./chunk-T74F4RUU.js";
+import {
+  Presence
+} from "./chunk-O3BLB6BG.js";
+import {
+  Combination_default,
   DismissableLayer,
   FocusScope,
   Portal,
-  Root2,
   composeEventHandlers,
-  createCollection,
-  createPopperScope,
   hideOthers,
   useControllableState,
-  useDirection,
   useFocusGuards,
   useId
-} from "./chunk-IY2QN2UP.js";
+} from "./chunk-HUVAWXZU.js";
 import "./chunk-JMGR4S6A.js";
 import {
   createContextScope,
-  useCallbackRef,
-  useLayoutEffect2
-} from "./chunk-ZVYILGJX.js";
+  useCallbackRef
+} from "./chunk-UPPYEY2C.js";
 import {
   Primitive,
   dispatchDiscreteCustomEvent
@@ -44,158 +48,32 @@ import {
 } from "./chunk-G3PMV62Z.js";
 
 // node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs
-var React6 = __toESM(require_react(), 1);
-
-// node_modules/@radix-ui/react-menu/dist/index.mjs
-var React5 = __toESM(require_react(), 1);
-
-// node_modules/@radix-ui/react-presence/dist/index.mjs
-var React2 = __toESM(require_react(), 1);
-var React = __toESM(require_react(), 1);
-function useStateMachine(initialState, machine) {
-  return React.useReducer((state, event) => {
-    const nextState = machine[state][event];
-    return nextState ?? state;
-  }, initialState);
-}
-var Presence = (props) => {
-  const { present, children } = props;
-  const presence = usePresence(present);
-  const child = typeof children === "function" ? children({ present: presence.isPresent }) : React2.Children.only(children);
-  const ref = useComposedRefs(presence.ref, getElementRef(child));
-  const forceMount = typeof children === "function";
-  return forceMount || presence.isPresent ? React2.cloneElement(child, { ref }) : null;
-};
-Presence.displayName = "Presence";
-function usePresence(present) {
-  const [node, setNode] = React2.useState();
-  const stylesRef = React2.useRef({});
-  const prevPresentRef = React2.useRef(present);
-  const prevAnimationNameRef = React2.useRef("none");
-  const initialState = present ? "mounted" : "unmounted";
-  const [state, send] = useStateMachine(initialState, {
-    mounted: {
-      UNMOUNT: "unmounted",
-      ANIMATION_OUT: "unmountSuspended"
-    },
-    unmountSuspended: {
-      MOUNT: "mounted",
-      ANIMATION_END: "unmounted"
-    },
-    unmounted: {
-      MOUNT: "mounted"
-    }
-  });
-  React2.useEffect(() => {
-    const currentAnimationName = getAnimationName(stylesRef.current);
-    prevAnimationNameRef.current = state === "mounted" ? currentAnimationName : "none";
-  }, [state]);
-  useLayoutEffect2(() => {
-    const styles = stylesRef.current;
-    const wasPresent = prevPresentRef.current;
-    const hasPresentChanged = wasPresent !== present;
-    if (hasPresentChanged) {
-      const prevAnimationName = prevAnimationNameRef.current;
-      const currentAnimationName = getAnimationName(styles);
-      if (present) {
-        send("MOUNT");
-      } else if (currentAnimationName === "none" || styles?.display === "none") {
-        send("UNMOUNT");
-      } else {
-        const isAnimating = prevAnimationName !== currentAnimationName;
-        if (wasPresent && isAnimating) {
-          send("ANIMATION_OUT");
-        } else {
-          send("UNMOUNT");
-        }
-      }
-      prevPresentRef.current = present;
-    }
-  }, [present, send]);
-  useLayoutEffect2(() => {
-    if (node) {
-      let timeoutId;
-      const ownerWindow = node.ownerDocument.defaultView ?? window;
-      const handleAnimationEnd = (event) => {
-        const currentAnimationName = getAnimationName(stylesRef.current);
-        const isCurrentAnimation = currentAnimationName.includes(event.animationName);
-        if (event.target === node && isCurrentAnimation) {
-          send("ANIMATION_END");
-          if (!prevPresentRef.current) {
-            const currentFillMode = node.style.animationFillMode;
-            node.style.animationFillMode = "forwards";
-            timeoutId = ownerWindow.setTimeout(() => {
-              if (node.style.animationFillMode === "forwards") {
-                node.style.animationFillMode = currentFillMode;
-              }
-            });
-          }
-        }
-      };
-      const handleAnimationStart = (event) => {
-        if (event.target === node) {
-          prevAnimationNameRef.current = getAnimationName(stylesRef.current);
-        }
-      };
-      node.addEventListener("animationstart", handleAnimationStart);
-      node.addEventListener("animationcancel", handleAnimationEnd);
-      node.addEventListener("animationend", handleAnimationEnd);
-      return () => {
-        ownerWindow.clearTimeout(timeoutId);
-        node.removeEventListener("animationstart", handleAnimationStart);
-        node.removeEventListener("animationcancel", handleAnimationEnd);
-        node.removeEventListener("animationend", handleAnimationEnd);
-      };
-    } else {
-      send("ANIMATION_END");
-    }
-  }, [node, send]);
-  return {
-    isPresent: ["mounted", "unmountSuspended"].includes(state),
-    ref: React2.useCallback((node2) => {
-      if (node2) stylesRef.current = getComputedStyle(node2);
-      setNode(node2);
-    }, [])
-  };
-}
-function getAnimationName(styles) {
-  return styles?.animationName || "none";
-}
-function getElementRef(element) {
-  let getter = Object.getOwnPropertyDescriptor(element.props, "ref")?.get;
-  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.ref;
-  }
-  getter = Object.getOwnPropertyDescriptor(element, "ref")?.get;
-  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.props.ref;
-  }
-  return element.props.ref || element.ref;
-}
-
-// node_modules/@radix-ui/react-roving-focus/dist/index.mjs
 var React4 = __toESM(require_react(), 1);
 
-// node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-context/dist/index.mjs
+// node_modules/@radix-ui/react-menu/dist/index.mjs
 var React3 = __toESM(require_react(), 1);
+
+// node_modules/@radix-ui/react-roving-focus/dist/index.mjs
+var React2 = __toESM(require_react(), 1);
+
+// node_modules/@radix-ui/react-roving-focus/node_modules/@radix-ui/react-context/dist/index.mjs
+var React = __toESM(require_react(), 1);
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
 function createContextScope2(scopeName, createContextScopeDeps = []) {
   let defaultContexts = [];
   function createContext3(rootComponentName, defaultContext) {
-    const BaseContext = React3.createContext(defaultContext);
+    const BaseContext = React.createContext(defaultContext);
     const index = defaultContexts.length;
     defaultContexts = [...defaultContexts, defaultContext];
     function Provider(props) {
       const { scope, children, ...context } = props;
       const Context = scope?.[scopeName][index] || BaseContext;
-      const value = React3.useMemo(() => context, Object.values(context));
+      const value = React.useMemo(() => context, Object.values(context));
       return (0, import_jsx_runtime.jsx)(Context.Provider, { value, children });
     }
     function useContext2(consumerName, scope) {
       const Context = scope?.[scopeName][index] || BaseContext;
-      const context = React3.useContext(Context);
+      const context = React.useContext(Context);
       if (context) return context;
       if (defaultContext !== void 0) return defaultContext;
       throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
@@ -205,11 +83,11 @@ function createContextScope2(scopeName, createContextScopeDeps = []) {
   }
   const createScope = () => {
     const scopeContexts = defaultContexts.map((defaultContext) => {
-      return React3.createContext(defaultContext);
+      return React.createContext(defaultContext);
     });
     return function useScope(scope) {
       const contexts = scope?.[scopeName] || scopeContexts;
-      return React3.useMemo(
+      return React.useMemo(
         () => ({ [`__scope${scopeName}`]: { ...scope, [scopeName]: contexts } }),
         [scope, contexts]
       );
@@ -232,7 +110,7 @@ function composeContextScopes(...scopes) {
         const currentScope = scopeProps[`__scope${scopeName}`];
         return { ...nextScopes2, ...currentScope };
       }, {});
-      return React3.useMemo(() => ({ [`__scope${baseScope.scopeName}`]: nextScopes }), [nextScopes]);
+      return React.useMemo(() => ({ [`__scope${baseScope.scopeName}`]: nextScopes }), [nextScopes]);
     };
   };
   createScope.scopeName = baseScope.scopeName;
@@ -250,13 +128,13 @@ var [createRovingFocusGroupContext, createRovingFocusGroupScope] = createContext
   [createCollectionScope]
 );
 var [RovingFocusProvider, useRovingFocusContext] = createRovingFocusGroupContext(GROUP_NAME);
-var RovingFocusGroup = React4.forwardRef(
+var RovingFocusGroup = React2.forwardRef(
   (props, forwardedRef) => {
     return (0, import_jsx_runtime2.jsx)(Collection.Provider, { scope: props.__scopeRovingFocusGroup, children: (0, import_jsx_runtime2.jsx)(Collection.Slot, { scope: props.__scopeRovingFocusGroup, children: (0, import_jsx_runtime2.jsx)(RovingFocusGroupImpl, { ...props, ref: forwardedRef }) }) });
   }
 );
 RovingFocusGroup.displayName = GROUP_NAME;
-var RovingFocusGroupImpl = React4.forwardRef((props, forwardedRef) => {
+var RovingFocusGroupImpl = React2.forwardRef((props, forwardedRef) => {
   const {
     __scopeRovingFocusGroup,
     orientation,
@@ -269,7 +147,7 @@ var RovingFocusGroupImpl = React4.forwardRef((props, forwardedRef) => {
     preventScrollOnEntryFocus = false,
     ...groupProps
   } = props;
-  const ref = React4.useRef(null);
+  const ref = React2.useRef(null);
   const composedRefs = useComposedRefs(forwardedRef, ref);
   const direction = useDirection(dir);
   const [currentTabStopId = null, setCurrentTabStopId] = useControllableState({
@@ -277,12 +155,12 @@ var RovingFocusGroupImpl = React4.forwardRef((props, forwardedRef) => {
     defaultProp: defaultCurrentTabStopId,
     onChange: onCurrentTabStopIdChange
   });
-  const [isTabbingBackOut, setIsTabbingBackOut] = React4.useState(false);
+  const [isTabbingBackOut, setIsTabbingBackOut] = React2.useState(false);
   const handleEntryFocus = useCallbackRef(onEntryFocus);
   const getItems = useCollection(__scopeRovingFocusGroup);
-  const isClickFocusRef = React4.useRef(false);
-  const [focusableItemsCount, setFocusableItemsCount] = React4.useState(0);
-  React4.useEffect(() => {
+  const isClickFocusRef = React2.useRef(false);
+  const [focusableItemsCount, setFocusableItemsCount] = React2.useState(0);
+  React2.useEffect(() => {
     const node = ref.current;
     if (node) {
       node.addEventListener(ENTRY_FOCUS, handleEntryFocus);
@@ -297,16 +175,16 @@ var RovingFocusGroupImpl = React4.forwardRef((props, forwardedRef) => {
       dir: direction,
       loop,
       currentTabStopId,
-      onItemFocus: React4.useCallback(
+      onItemFocus: React2.useCallback(
         (tabStopId) => setCurrentTabStopId(tabStopId),
         [setCurrentTabStopId]
       ),
-      onItemShiftTab: React4.useCallback(() => setIsTabbingBackOut(true), []),
-      onFocusableItemAdd: React4.useCallback(
+      onItemShiftTab: React2.useCallback(() => setIsTabbingBackOut(true), []),
+      onFocusableItemAdd: React2.useCallback(
         () => setFocusableItemsCount((prevCount) => prevCount + 1),
         []
       ),
-      onFocusableItemRemove: React4.useCallback(
+      onFocusableItemRemove: React2.useCallback(
         () => setFocusableItemsCount((prevCount) => prevCount - 1),
         []
       ),
@@ -346,7 +224,7 @@ var RovingFocusGroupImpl = React4.forwardRef((props, forwardedRef) => {
   );
 });
 var ITEM_NAME = "RovingFocusGroupItem";
-var RovingFocusGroupItem = React4.forwardRef(
+var RovingFocusGroupItem = React2.forwardRef(
   (props, forwardedRef) => {
     const {
       __scopeRovingFocusGroup,
@@ -361,7 +239,7 @@ var RovingFocusGroupItem = React4.forwardRef(
     const isCurrentTabStop = context.currentTabStopId === id;
     const getItems = useCollection(__scopeRovingFocusGroup);
     const { onFocusableItemAdd, onFocusableItemRemove } = context;
-    React4.useEffect(() => {
+    React2.useEffect(() => {
       if (focusable) {
         onFocusableItemAdd();
         return () => onFocusableItemRemove();
@@ -476,11 +354,11 @@ var [MenuRootProvider, useMenuRootContext] = createMenuContext(MENU_NAME);
 var Menu = (props) => {
   const { __scopeMenu, open = false, children, dir, onOpenChange, modal = true } = props;
   const popperScope = usePopperScope(__scopeMenu);
-  const [content, setContent] = React5.useState(null);
-  const isUsingKeyboardRef = React5.useRef(false);
+  const [content, setContent] = React3.useState(null);
+  const isUsingKeyboardRef = React3.useRef(false);
   const handleOpenChange = useCallbackRef(onOpenChange);
   const direction = useDirection(dir);
-  React5.useEffect(() => {
+  React3.useEffect(() => {
     const handleKeyDown = () => {
       isUsingKeyboardRef.current = true;
       document.addEventListener("pointerdown", handlePointer, { capture: true, once: true });
@@ -506,7 +384,7 @@ var Menu = (props) => {
         MenuRootProvider,
         {
           scope: __scopeMenu,
-          onClose: React5.useCallback(() => handleOpenChange(false), [handleOpenChange]),
+          onClose: React3.useCallback(() => handleOpenChange(false), [handleOpenChange]),
           isUsingKeyboardRef,
           dir: direction,
           modal,
@@ -518,7 +396,7 @@ var Menu = (props) => {
 };
 Menu.displayName = MENU_NAME;
 var ANCHOR_NAME = "MenuAnchor";
-var MenuAnchor = React5.forwardRef(
+var MenuAnchor = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, ...anchorProps } = props;
     const popperScope = usePopperScope(__scopeMenu);
@@ -538,7 +416,7 @@ var MenuPortal = (props) => {
 MenuPortal.displayName = PORTAL_NAME;
 var CONTENT_NAME = "MenuContent";
 var [MenuContentProvider, useMenuContentContext] = createMenuContext(CONTENT_NAME);
-var MenuContent = React5.forwardRef(
+var MenuContent = React3.forwardRef(
   (props, forwardedRef) => {
     const portalContext = usePortalContext(CONTENT_NAME, props.__scopeMenu);
     const { forceMount = portalContext.forceMount, ...contentProps } = props;
@@ -547,12 +425,12 @@ var MenuContent = React5.forwardRef(
     return (0, import_jsx_runtime3.jsx)(Collection2.Provider, { scope: props.__scopeMenu, children: (0, import_jsx_runtime3.jsx)(Presence, { present: forceMount || context.open, children: (0, import_jsx_runtime3.jsx)(Collection2.Slot, { scope: props.__scopeMenu, children: rootContext.modal ? (0, import_jsx_runtime3.jsx)(MenuRootContentModal, { ...contentProps, ref: forwardedRef }) : (0, import_jsx_runtime3.jsx)(MenuRootContentNonModal, { ...contentProps, ref: forwardedRef }) }) }) });
   }
 );
-var MenuRootContentModal = React5.forwardRef(
+var MenuRootContentModal = React3.forwardRef(
   (props, forwardedRef) => {
     const context = useMenuContext(CONTENT_NAME, props.__scopeMenu);
-    const ref = React5.useRef(null);
+    const ref = React3.useRef(null);
     const composedRefs = useComposedRefs(forwardedRef, ref);
-    React5.useEffect(() => {
+    React3.useEffect(() => {
       const content = ref.current;
       if (content) return hideOthers(content);
     }, []);
@@ -574,7 +452,7 @@ var MenuRootContentModal = React5.forwardRef(
     );
   }
 );
-var MenuRootContentNonModal = React5.forwardRef((props, forwardedRef) => {
+var MenuRootContentNonModal = React3.forwardRef((props, forwardedRef) => {
   const context = useMenuContext(CONTENT_NAME, props.__scopeMenu);
   return (0, import_jsx_runtime3.jsx)(
     MenuContentImpl,
@@ -588,7 +466,7 @@ var MenuRootContentNonModal = React5.forwardRef((props, forwardedRef) => {
     }
   );
 });
-var MenuContentImpl = React5.forwardRef(
+var MenuContentImpl = React3.forwardRef(
   (props, forwardedRef) => {
     const {
       __scopeMenu,
@@ -611,16 +489,16 @@ var MenuContentImpl = React5.forwardRef(
     const popperScope = usePopperScope(__scopeMenu);
     const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeMenu);
     const getItems = useCollection2(__scopeMenu);
-    const [currentItemId, setCurrentItemId] = React5.useState(null);
-    const contentRef = React5.useRef(null);
+    const [currentItemId, setCurrentItemId] = React3.useState(null);
+    const contentRef = React3.useRef(null);
     const composedRefs = useComposedRefs(forwardedRef, contentRef, context.onContentChange);
-    const timerRef = React5.useRef(0);
-    const searchRef = React5.useRef("");
-    const pointerGraceTimerRef = React5.useRef(0);
-    const pointerGraceIntentRef = React5.useRef(null);
-    const pointerDirRef = React5.useRef("right");
-    const lastPointerXRef = React5.useRef(0);
-    const ScrollLockWrapper = disableOutsideScroll ? Combination_default : React5.Fragment;
+    const timerRef = React3.useRef(0);
+    const searchRef = React3.useRef("");
+    const pointerGraceTimerRef = React3.useRef(0);
+    const pointerGraceIntentRef = React3.useRef(null);
+    const pointerDirRef = React3.useRef("right");
+    const lastPointerXRef = React3.useRef(0);
+    const ScrollLockWrapper = disableOutsideScroll ? Combination_default : React3.Fragment;
     const scrollLockWrapperProps = disableOutsideScroll ? { as: Slot, allowPinchZoom: true } : void 0;
     const handleTypeaheadSearch = (key) => {
       const search = searchRef.current + key;
@@ -639,11 +517,11 @@ var MenuContentImpl = React5.forwardRef(
         setTimeout(() => newItem.focus());
       }
     };
-    React5.useEffect(() => {
+    React3.useEffect(() => {
       return () => window.clearTimeout(timerRef.current);
     }, []);
     useFocusGuards();
-    const isPointerMovingToSubmenu = React5.useCallback((event) => {
+    const isPointerMovingToSubmenu = React3.useCallback((event) => {
       const isMovingTowards = pointerDirRef.current === pointerGraceIntentRef.current?.side;
       return isMovingTowards && isPointerInGraceArea(event, pointerGraceIntentRef.current?.area);
     }, []);
@@ -652,13 +530,13 @@ var MenuContentImpl = React5.forwardRef(
       {
         scope: __scopeMenu,
         searchRef,
-        onItemEnter: React5.useCallback(
+        onItemEnter: React3.useCallback(
           (event) => {
             if (isPointerMovingToSubmenu(event)) event.preventDefault();
           },
           [isPointerMovingToSubmenu]
         ),
-        onItemLeave: React5.useCallback(
+        onItemLeave: React3.useCallback(
           (event) => {
             if (isPointerMovingToSubmenu(event)) return;
             contentRef.current?.focus();
@@ -666,14 +544,14 @@ var MenuContentImpl = React5.forwardRef(
           },
           [isPointerMovingToSubmenu]
         ),
-        onTriggerLeave: React5.useCallback(
+        onTriggerLeave: React3.useCallback(
           (event) => {
             if (isPointerMovingToSubmenu(event)) event.preventDefault();
           },
           [isPointerMovingToSubmenu]
         ),
         pointerGraceTimerRef,
-        onPointerGraceIntentChange: React5.useCallback((intent) => {
+        onPointerGraceIntentChange: React3.useCallback((intent) => {
           pointerGraceIntentRef.current = intent;
         }, []),
         children: (0, import_jsx_runtime3.jsx)(ScrollLockWrapper, { ...scrollLockWrapperProps, children: (0, import_jsx_runtime3.jsx)(
@@ -772,7 +650,7 @@ var MenuContentImpl = React5.forwardRef(
 );
 MenuContent.displayName = CONTENT_NAME;
 var GROUP_NAME2 = "MenuGroup";
-var MenuGroup = React5.forwardRef(
+var MenuGroup = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, ...groupProps } = props;
     return (0, import_jsx_runtime3.jsx)(Primitive.div, { role: "group", ...groupProps, ref: forwardedRef });
@@ -780,7 +658,7 @@ var MenuGroup = React5.forwardRef(
 );
 MenuGroup.displayName = GROUP_NAME2;
 var LABEL_NAME = "MenuLabel";
-var MenuLabel = React5.forwardRef(
+var MenuLabel = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, ...labelProps } = props;
     return (0, import_jsx_runtime3.jsx)(Primitive.div, { ...labelProps, ref: forwardedRef });
@@ -789,14 +667,14 @@ var MenuLabel = React5.forwardRef(
 MenuLabel.displayName = LABEL_NAME;
 var ITEM_NAME2 = "MenuItem";
 var ITEM_SELECT = "menu.itemSelect";
-var MenuItem = React5.forwardRef(
+var MenuItem = React3.forwardRef(
   (props, forwardedRef) => {
     const { disabled = false, onSelect, ...itemProps } = props;
-    const ref = React5.useRef(null);
+    const ref = React3.useRef(null);
     const rootContext = useMenuRootContext(ITEM_NAME2, props.__scopeMenu);
     const contentContext = useMenuContentContext(ITEM_NAME2, props.__scopeMenu);
     const composedRefs = useComposedRefs(forwardedRef, ref);
-    const isPointerDownRef = React5.useRef(false);
+    const isPointerDownRef = React3.useRef(false);
     const handleSelect = () => {
       const menuItem = ref.current;
       if (!disabled && menuItem) {
@@ -837,16 +715,16 @@ var MenuItem = React5.forwardRef(
   }
 );
 MenuItem.displayName = ITEM_NAME2;
-var MenuItemImpl = React5.forwardRef(
+var MenuItemImpl = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, disabled = false, textValue, ...itemProps } = props;
     const contentContext = useMenuContentContext(ITEM_NAME2, __scopeMenu);
     const rovingFocusGroupScope = useRovingFocusGroupScope(__scopeMenu);
-    const ref = React5.useRef(null);
+    const ref = React3.useRef(null);
     const composedRefs = useComposedRefs(forwardedRef, ref);
-    const [isFocused, setIsFocused] = React5.useState(false);
-    const [textContent, setTextContent] = React5.useState("");
-    React5.useEffect(() => {
+    const [isFocused, setIsFocused] = React3.useState(false);
+    const [textContent, setTextContent] = React3.useState("");
+    React3.useEffect(() => {
       const menuItem = ref.current;
       if (menuItem) {
         setTextContent((menuItem.textContent ?? "").trim());
@@ -894,7 +772,7 @@ var MenuItemImpl = React5.forwardRef(
   }
 );
 var CHECKBOX_ITEM_NAME = "MenuCheckboxItem";
-var MenuCheckboxItem = React5.forwardRef(
+var MenuCheckboxItem = React3.forwardRef(
   (props, forwardedRef) => {
     const { checked = false, onCheckedChange, ...checkboxItemProps } = props;
     return (0, import_jsx_runtime3.jsx)(ItemIndicatorProvider, { scope: props.__scopeMenu, checked, children: (0, import_jsx_runtime3.jsx)(
@@ -921,7 +799,7 @@ var [RadioGroupProvider, useRadioGroupContext] = createMenuContext(
   { value: void 0, onValueChange: () => {
   } }
 );
-var MenuRadioGroup = React5.forwardRef(
+var MenuRadioGroup = React3.forwardRef(
   (props, forwardedRef) => {
     const { value, onValueChange, ...groupProps } = props;
     const handleValueChange = useCallbackRef(onValueChange);
@@ -930,7 +808,7 @@ var MenuRadioGroup = React5.forwardRef(
 );
 MenuRadioGroup.displayName = RADIO_GROUP_NAME;
 var RADIO_ITEM_NAME = "MenuRadioItem";
-var MenuRadioItem = React5.forwardRef(
+var MenuRadioItem = React3.forwardRef(
   (props, forwardedRef) => {
     const { value, ...radioItemProps } = props;
     const context = useRadioGroupContext(RADIO_ITEM_NAME, props.__scopeMenu);
@@ -958,7 +836,7 @@ var [ItemIndicatorProvider, useItemIndicatorContext] = createMenuContext(
   ITEM_INDICATOR_NAME,
   { checked: false }
 );
-var MenuItemIndicator = React5.forwardRef(
+var MenuItemIndicator = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, forceMount, ...itemIndicatorProps } = props;
     const indicatorContext = useItemIndicatorContext(ITEM_INDICATOR_NAME, __scopeMenu);
@@ -980,7 +858,7 @@ var MenuItemIndicator = React5.forwardRef(
 );
 MenuItemIndicator.displayName = ITEM_INDICATOR_NAME;
 var SEPARATOR_NAME = "MenuSeparator";
-var MenuSeparator = React5.forwardRef(
+var MenuSeparator = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, ...separatorProps } = props;
     return (0, import_jsx_runtime3.jsx)(
@@ -996,7 +874,7 @@ var MenuSeparator = React5.forwardRef(
 );
 MenuSeparator.displayName = SEPARATOR_NAME;
 var ARROW_NAME = "MenuArrow";
-var MenuArrow = React5.forwardRef(
+var MenuArrow = React3.forwardRef(
   (props, forwardedRef) => {
     const { __scopeMenu, ...arrowProps } = props;
     const popperScope = usePopperScope(__scopeMenu);
@@ -1010,10 +888,10 @@ var MenuSub = (props) => {
   const { __scopeMenu, children, open = false, onOpenChange } = props;
   const parentMenuContext = useMenuContext(SUB_NAME, __scopeMenu);
   const popperScope = usePopperScope(__scopeMenu);
-  const [trigger, setTrigger] = React5.useState(null);
-  const [content, setContent] = React5.useState(null);
+  const [trigger, setTrigger] = React3.useState(null);
+  const [content, setContent] = React3.useState(null);
   const handleOpenChange = useCallbackRef(onOpenChange);
-  React5.useEffect(() => {
+  React3.useEffect(() => {
     if (parentMenuContext.open === false) handleOpenChange(false);
     return () => handleOpenChange(false);
   }, [parentMenuContext.open, handleOpenChange]);
@@ -1041,21 +919,21 @@ var MenuSub = (props) => {
 };
 MenuSub.displayName = SUB_NAME;
 var SUB_TRIGGER_NAME = "MenuSubTrigger";
-var MenuSubTrigger = React5.forwardRef(
+var MenuSubTrigger = React3.forwardRef(
   (props, forwardedRef) => {
     const context = useMenuContext(SUB_TRIGGER_NAME, props.__scopeMenu);
     const rootContext = useMenuRootContext(SUB_TRIGGER_NAME, props.__scopeMenu);
     const subContext = useMenuSubContext(SUB_TRIGGER_NAME, props.__scopeMenu);
     const contentContext = useMenuContentContext(SUB_TRIGGER_NAME, props.__scopeMenu);
-    const openTimerRef = React5.useRef(null);
+    const openTimerRef = React3.useRef(null);
     const { pointerGraceTimerRef, onPointerGraceIntentChange } = contentContext;
     const scope = { __scopeMenu: props.__scopeMenu };
-    const clearOpenTimer = React5.useCallback(() => {
+    const clearOpenTimer = React3.useCallback(() => {
       if (openTimerRef.current) window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
     }, []);
-    React5.useEffect(() => clearOpenTimer, [clearOpenTimer]);
-    React5.useEffect(() => {
+    React3.useEffect(() => clearOpenTimer, [clearOpenTimer]);
+    React3.useEffect(() => {
       const pointerGraceTimer = pointerGraceTimerRef.current;
       return () => {
         window.clearTimeout(pointerGraceTimer);
@@ -1142,14 +1020,14 @@ var MenuSubTrigger = React5.forwardRef(
 );
 MenuSubTrigger.displayName = SUB_TRIGGER_NAME;
 var SUB_CONTENT_NAME = "MenuSubContent";
-var MenuSubContent = React5.forwardRef(
+var MenuSubContent = React3.forwardRef(
   (props, forwardedRef) => {
     const portalContext = usePortalContext(CONTENT_NAME, props.__scopeMenu);
     const { forceMount = portalContext.forceMount, ...subContentProps } = props;
     const context = useMenuContext(CONTENT_NAME, props.__scopeMenu);
     const rootContext = useMenuRootContext(CONTENT_NAME, props.__scopeMenu);
     const subContext = useMenuSubContext(SUB_CONTENT_NAME, props.__scopeMenu);
-    const ref = React5.useRef(null);
+    const ref = React3.useRef(null);
     const composedRefs = useComposedRefs(forwardedRef, ref);
     return (0, import_jsx_runtime3.jsx)(Collection2.Provider, { scope: props.__scopeMenu, children: (0, import_jsx_runtime3.jsx)(Presence, { present: forceMount || context.open, children: (0, import_jsx_runtime3.jsx)(Collection2.Slot, { scope: props.__scopeMenu, children: (0, import_jsx_runtime3.jsx)(
       MenuContentImpl,
@@ -1279,7 +1157,7 @@ var DropdownMenu = (props) => {
     modal = true
   } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
-  const triggerRef = React6.useRef(null);
+  const triggerRef = React4.useRef(null);
   const [open = false, setOpen] = useControllableState({
     prop: openProp,
     defaultProp: defaultOpen,
@@ -1294,7 +1172,7 @@ var DropdownMenu = (props) => {
       contentId: useId(),
       open,
       onOpenChange: setOpen,
-      onOpenToggle: React6.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
+      onOpenToggle: React4.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
       modal,
       children: (0, import_jsx_runtime4.jsx)(Root3, { ...menuScope, open, onOpenChange: setOpen, dir, modal, children })
     }
@@ -1302,7 +1180,7 @@ var DropdownMenu = (props) => {
 };
 DropdownMenu.displayName = DROPDOWN_MENU_NAME;
 var TRIGGER_NAME = "DropdownMenuTrigger";
-var DropdownMenuTrigger = React6.forwardRef(
+var DropdownMenuTrigger = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, disabled = false, ...triggerProps } = props;
     const context = useDropdownMenuContext(TRIGGER_NAME, __scopeDropdownMenu);
@@ -1345,12 +1223,12 @@ var DropdownMenuPortal = (props) => {
 };
 DropdownMenuPortal.displayName = PORTAL_NAME2;
 var CONTENT_NAME2 = "DropdownMenuContent";
-var DropdownMenuContent = React6.forwardRef(
+var DropdownMenuContent = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, ...contentProps } = props;
     const context = useDropdownMenuContext(CONTENT_NAME2, __scopeDropdownMenu);
     const menuScope = useMenuScope(__scopeDropdownMenu);
-    const hasInteractedOutsideRef = React6.useRef(false);
+    const hasInteractedOutsideRef = React4.useRef(false);
     return (0, import_jsx_runtime4.jsx)(
       Content2,
       {
@@ -1387,7 +1265,7 @@ var DropdownMenuContent = React6.forwardRef(
 );
 DropdownMenuContent.displayName = CONTENT_NAME2;
 var GROUP_NAME3 = "DropdownMenuGroup";
-var DropdownMenuGroup = React6.forwardRef(
+var DropdownMenuGroup = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, ...groupProps } = props;
     const menuScope = useMenuScope(__scopeDropdownMenu);
@@ -1396,7 +1274,7 @@ var DropdownMenuGroup = React6.forwardRef(
 );
 DropdownMenuGroup.displayName = GROUP_NAME3;
 var LABEL_NAME2 = "DropdownMenuLabel";
-var DropdownMenuLabel = React6.forwardRef(
+var DropdownMenuLabel = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, ...labelProps } = props;
     const menuScope = useMenuScope(__scopeDropdownMenu);
@@ -1405,7 +1283,7 @@ var DropdownMenuLabel = React6.forwardRef(
 );
 DropdownMenuLabel.displayName = LABEL_NAME2;
 var ITEM_NAME3 = "DropdownMenuItem";
-var DropdownMenuItem = React6.forwardRef(
+var DropdownMenuItem = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, ...itemProps } = props;
     const menuScope = useMenuScope(__scopeDropdownMenu);
@@ -1414,42 +1292,42 @@ var DropdownMenuItem = React6.forwardRef(
 );
 DropdownMenuItem.displayName = ITEM_NAME3;
 var CHECKBOX_ITEM_NAME2 = "DropdownMenuCheckboxItem";
-var DropdownMenuCheckboxItem = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuCheckboxItem = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...checkboxItemProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(CheckboxItem, { ...menuScope, ...checkboxItemProps, ref: forwardedRef });
 });
 DropdownMenuCheckboxItem.displayName = CHECKBOX_ITEM_NAME2;
 var RADIO_GROUP_NAME2 = "DropdownMenuRadioGroup";
-var DropdownMenuRadioGroup = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuRadioGroup = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...radioGroupProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(RadioGroup, { ...menuScope, ...radioGroupProps, ref: forwardedRef });
 });
 DropdownMenuRadioGroup.displayName = RADIO_GROUP_NAME2;
 var RADIO_ITEM_NAME2 = "DropdownMenuRadioItem";
-var DropdownMenuRadioItem = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuRadioItem = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...radioItemProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(RadioItem, { ...menuScope, ...radioItemProps, ref: forwardedRef });
 });
 DropdownMenuRadioItem.displayName = RADIO_ITEM_NAME2;
 var INDICATOR_NAME = "DropdownMenuItemIndicator";
-var DropdownMenuItemIndicator = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuItemIndicator = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...itemIndicatorProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(ItemIndicator, { ...menuScope, ...itemIndicatorProps, ref: forwardedRef });
 });
 DropdownMenuItemIndicator.displayName = INDICATOR_NAME;
 var SEPARATOR_NAME2 = "DropdownMenuSeparator";
-var DropdownMenuSeparator = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuSeparator = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...separatorProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(Separator, { ...menuScope, ...separatorProps, ref: forwardedRef });
 });
 DropdownMenuSeparator.displayName = SEPARATOR_NAME2;
 var ARROW_NAME2 = "DropdownMenuArrow";
-var DropdownMenuArrow = React6.forwardRef(
+var DropdownMenuArrow = React4.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDropdownMenu, ...arrowProps } = props;
     const menuScope = useMenuScope(__scopeDropdownMenu);
@@ -1468,14 +1346,14 @@ var DropdownMenuSub = (props) => {
   return (0, import_jsx_runtime4.jsx)(Sub, { ...menuScope, open, onOpenChange: setOpen, children });
 };
 var SUB_TRIGGER_NAME2 = "DropdownMenuSubTrigger";
-var DropdownMenuSubTrigger = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuSubTrigger = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...subTriggerProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(SubTrigger, { ...menuScope, ...subTriggerProps, ref: forwardedRef });
 });
 DropdownMenuSubTrigger.displayName = SUB_TRIGGER_NAME2;
 var SUB_CONTENT_NAME2 = "DropdownMenuSubContent";
-var DropdownMenuSubContent = React6.forwardRef((props, forwardedRef) => {
+var DropdownMenuSubContent = React4.forwardRef((props, forwardedRef) => {
   const { __scopeDropdownMenu, ...subContentProps } = props;
   const menuScope = useMenuScope(__scopeDropdownMenu);
   return (0, import_jsx_runtime4.jsx)(

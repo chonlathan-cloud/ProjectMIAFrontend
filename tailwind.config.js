@@ -12,6 +12,16 @@ export default {
       fontFamily: {
         sans: ['Prompt', 'Sarabun', 'system-ui', 'sans-serif'],
       },
+      fontSize: {
+        xs: ['0.78rem', { lineHeight: '1.45' }],
+        sm: ['0.88rem', { lineHeight: '1.5' }],
+        base: ['0.95rem', { lineHeight: '1.55' }],
+        lg: ['1.05rem', { lineHeight: '1.55' }],
+        xl: ['1.2rem', { lineHeight: '1.45' }],
+        '2xl': ['1.4rem', { lineHeight: '1.35' }],
+        '3xl': ['1.7rem', { lineHeight: '1.25' }],
+        '4xl': ['2rem', { lineHeight: '1.2' }],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

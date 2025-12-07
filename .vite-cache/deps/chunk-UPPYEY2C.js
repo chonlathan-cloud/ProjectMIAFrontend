@@ -11,6 +11,22 @@ import {
 // node_modules/@radix-ui/react-context/dist/index.mjs
 var React = __toESM(require_react(), 1);
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
+function createContext2(rootComponentName, defaultContext) {
+  const Context = React.createContext(defaultContext);
+  const Provider = (props) => {
+    const { children, ...context } = props;
+    const value = React.useMemo(() => context, Object.values(context));
+    return (0, import_jsx_runtime.jsx)(Context.Provider, { value, children });
+  };
+  Provider.displayName = rootComponentName + "Provider";
+  function useContext2(consumerName) {
+    const context = React.useContext(Context);
+    if (context) return context;
+    if (defaultContext !== void 0) return defaultContext;
+    throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
+  }
+  return [Provider, useContext2];
+}
 function createContextScope(scopeName, createContextScopeDeps = []) {
   let defaultContexts = [];
   function createContext3(rootComponentName, defaultContext) {
@@ -69,24 +85,25 @@ function composeContextScopes(...scopes) {
   return createScope;
 }
 
-// node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs
+// node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs
 var React2 = __toESM(require_react(), 1);
+var useLayoutEffect2 = Boolean(globalThis?.document) ? React2.useLayoutEffect : () => {
+};
+
+// node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs
+var React3 = __toESM(require_react(), 1);
 function useCallbackRef(callback) {
-  const callbackRef = React2.useRef(callback);
-  React2.useEffect(() => {
+  const callbackRef = React3.useRef(callback);
+  React3.useEffect(() => {
     callbackRef.current = callback;
   });
-  return React2.useMemo(() => (...args) => callbackRef.current?.(...args), []);
+  return React3.useMemo(() => (...args) => callbackRef.current?.(...args), []);
 }
 
-// node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs
-var React3 = __toESM(require_react(), 1);
-var useLayoutEffect2 = Boolean(globalThis?.document) ? React3.useLayoutEffect : () => {
-};
-
 export {
+  createContext2,
   createContextScope,
-  useCallbackRef,
-  useLayoutEffect2
+  useLayoutEffect2,
+  useCallbackRef
 };
-//# sourceMappingURL=chunk-ZVYILGJX.js.map
+//# sourceMappingURL=chunk-UPPYEY2C.js.map

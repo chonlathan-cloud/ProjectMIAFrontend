@@ -14,6 +14,7 @@ import { ABTest } from '@/pages/ABTest';
 import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import Inbox from "./pages/Inbox";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
@@ -72,6 +73,8 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="settings" element={<Settings />} />
           <Route path="ab-test" element={<ABTest />} />
+          <Route path="inbox" element={<Inbox />} />
+          
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

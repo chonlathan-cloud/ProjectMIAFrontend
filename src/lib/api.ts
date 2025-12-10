@@ -3,19 +3,30 @@ import { auth } from './firebase';
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:3000';
+const TOKEN_STORAGE_KEY = 'firebase_token';
 
 // -------------------- core helpers --------------------
 
 async function getIdToken(): Promise<string> {
   const user = auth.currentUser;
-  if (!user) {
-    throw new Error('No authenticated user');
+
+  if (user) {
+    const token = await user.getIdToken();
+    if (!token) {
+      throw new Error('Failed to get ID token');
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    }
+    return token;
   }
-  const token = await user.getIdToken();
-  if (!token) {
-    throw new Error('Failed to get ID token');
+
+  if (typeof window !== 'undefined') {
+    const existing = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (existing) return existing;
   }
-  return token;
+
+  throw new Error('No authenticated user');
 }
 
 async function authedFetch(path: string, options: RequestInit = {}) {

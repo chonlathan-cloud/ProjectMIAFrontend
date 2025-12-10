@@ -17,6 +17,8 @@ import { auth } from '@/lib/firebase';
 import Inbox from "./pages/Inbox";
 import KnowledgeView from '@/pages/KnowledgeView';
 import KnowledgeEditor from '@/pages/KnowledgeEditor';
+import Website from "@/pages/Website";
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
@@ -59,7 +61,20 @@ function App() {
           tier: 'growth',
           avatar: fbUser.photoURL || undefined,
         });
+        fbUser
+          .getIdToken()
+          .then((token) => {
+            if (token && typeof window !== 'undefined') {
+              localStorage.setItem('firebase_token', token);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to refresh Firebase token', err);
+          });
       } else {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('firebase_token');
+        }
         logout();
       }
     });
@@ -90,6 +105,8 @@ function App() {
           <Route path="inbox" element={<Inbox />} />
           <Route path="store/:storeId/knowledge" element={<KnowledgeRoute />} />
           <Route path="stores/:storeId/knowledge-editor" element={<KnowledgeEditorRoute />} />
+          <Route path="website" element={<Website />} />
+
           
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

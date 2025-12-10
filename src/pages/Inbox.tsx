@@ -24,11 +24,6 @@ type InboxMessage = {
   timestamp: number;
 };
 
-type StoreOption = {
-  id: string;
-  name: string;
-};
-
 const detectSender = (
   type?: string,
   isFromUser?: boolean,
@@ -191,9 +186,6 @@ const buildCustomers = (
 };
 
 export default function Inbox() {
-  const [stores, setStores] = useState<StoreOption[]>([]);
-  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
-
   const [customers, setCustomers] = useState<InboxCustomer[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -210,33 +202,8 @@ export default function Inbox() {
 
   const selectCustomer = (id: string) => setSelected(id);
 
-  // โหลดรายการ store ของ user
-  useEffect(() => {
-    async function loadStores() {
-      try {
-        const res = await authedJson<any>("/api/stores");
-        const storesData: StoreOption[] =
-          res?.data?.stores?.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-          })) ?? [];
-
-        setStores(storesData);
-        if (!activeStoreId && storesData.length > 0) {
-          setActiveStoreId(storesData[0].id);
-        }
-      } catch (err) {
-        console.error("loadStores error", err);
-        toast.error("โหลดรายการสโตร์ไม่สำเร็จ");
-      }
-    }
-
-    loadStores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const loadSuggestions = useCallback(async () => {
-    if (!selected || !activeStoreId) return;
+    if (!selected) return;
     setLoadingSuggest(true);
     setSuggestions([]);
 
@@ -244,7 +211,7 @@ export default function Inbox() {
       const res = await authedJson("/api/inbox/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId: activeStoreId, userId: selected }),
+        body: JSON.stringify({ userId: selected }),
       });
 
       if ((res as any).success) {
@@ -257,16 +224,13 @@ export default function Inbox() {
     } finally {
       setLoadingSuggest(false);
     }
-  }, [selected, activeStoreId]);
+  }, [selected]);
 
   const loadCustomers = useCallback(async () => {
-    if (!activeStoreId) return;
     try {
       setLoadingCustomers(true);
       const [data, recent] = await Promise.all([
-        authedJson<any>(
-          `/api/inbox/customers?storeId=${activeStoreId}`,
-        ).catch(() => ({ customers: [] })),
+        authedJson<any>("/api/inbox/customers").catch(() => ({ customers: [] })),
         getRecentMessages().catch(() => ({ data: { items: [] } })),
       ]);
 
@@ -277,26 +241,23 @@ export default function Inbox() {
       const list = buildCustomers(rawList, recentItems);
       setCustomers(list);
 
-      if (!selected && list.length > 0) {
-        setSelected(list[0].userId);
+      if (list.length > 0) {
+        setSelected((prev) => prev ?? list[0].userId);
       }
     } catch {
       toast.error("โหลดรายชื่อลูกค้าไม่สำเร็จ");
     } finally {
       setLoadingCustomers(false);
     }
-  }, [selected, activeStoreId]);
+  }, []);
 
   const loadChatHistory = useCallback(
     async (customerId: string, opts: { silent?: boolean } = {}) => {
-      if (!activeStoreId) return;
       try {
         if (!opts.silent) setLoadingMessages(true);
 
         const [historyRes, recentsRes] = await Promise.all([
-          authedJson<any>(
-            `/api/inbox/history/${customerId}?storeId=${activeStoreId}`,
-          ).catch(() => null),
+          authedJson<any>(`/api/inbox/history/${customerId}`).catch(() => null),
           recentLogs.length
             ? Promise.resolve({ data: { items: recentLogs } })
             : getRecentMessages().catch(() => ({ data: { items: [] } })),
@@ -321,12 +282,12 @@ export default function Inbox() {
         if (!opts.silent) setLoadingMessages(false);
       }
     },
-    [recentLogs, activeStoreId],
+    [recentLogs],
   );
 
   const sendMessage = useCallback(
     async () => {
-      if (!selected || !input.trim() || !activeStoreId) return;
+      if (!selected || !input.trim()) return;
       const text = input.trim();
       setSending(true);
       try {
@@ -353,28 +314,24 @@ export default function Inbox() {
             }),
         );
 
-        await authedJson(
-          `/api/inbox/send/${selected}?storeId=${activeStoreId}`,
-          {
-            method: "POST",
-            body: JSON.stringify({ message: text }),
-            headers: { "Content-Type": "application/json" },
-          },
-        );
+        await authedJson(`/api/inbox/send/${selected}`, {
+          method: "POST",
+          body: JSON.stringify({ message: text }),
+          headers: { "Content-Type": "application/json" },
+        });
       } catch {
         toast.error("ส่งข้อความไม่สำเร็จ");
       } finally {
         setSending(false);
       }
     },
-    [input, selected, activeStoreId],
+    [input, selected],
   );
 
   const connectRealtime = useCallback(
     (customerId: string) => {
-      if (!activeStoreId) return null;
       const sse = new EventSource(
-        `${API_BASE_URL}/api/inbox/stream/${customerId}?storeId=${activeStoreId}`,
+        `${API_BASE_URL}/api/inbox/stream/${customerId}`,
       );
 
       sse.onmessage = (event) => {
@@ -412,23 +369,22 @@ export default function Inbox() {
 
       return sse;
     },
-    [activeStoreId],
+    [],
   );
 
   useEffect(() => {
-    if (!activeStoreId) return;
     loadCustomers();
-  }, [loadCustomers, activeStoreId]);
+  }, [loadCustomers]);
 
   useEffect(() => {
-    if (!selected || !activeStoreId) return;
+    if (!selected) return;
     setMessages([]);
     loadChatHistory(selected);
     const sse = connectRealtime(selected);
     return () => {
       sse?.close();
     };
-  }, [connectRealtime, loadChatHistory, selected, activeStoreId]);
+  }, [connectRealtime, loadChatHistory, selected]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -517,28 +473,9 @@ export default function Inbox() {
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 dark:bg-gray-900/50">
         {!selected ? (
           <div className="flex-1 flex flex-col">
-            {/* Header พร้อม Store selector */}
+            {/* Header */}
             <div className="p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Store:</span>
-                <select
-                  className="text-sm border border-gray-200 dark:border-slate-700 rounded-md px-2 py-1 bg-white dark:bg-slate-900"
-                  value={activeStoreId ?? ""}
-                  onChange={(e) => {
-                    const newId = e.target.value || null;
-                    setActiveStoreId(newId);
-                    setCustomers([]);
-                    setMessages([]);
-                    setSelected(null);
-                  }}
-                >
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <span className="font-semibold">Inbox</span>
             </div>
             <div className="flex-1 flex items-center justify-center text-gray-400 flex-col gap-2">
               <span className="text-4xl">💬</span>
@@ -547,29 +484,9 @@ export default function Inbox() {
           </div>
         ) : (
           <>
-            {/* Header: Store selector + ชื่อลูกค้า + ปุ่ม AI */}
+            {/* Header: ชื่อลูกค้า + ปุ่ม AI */}
             <div className="p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Store:</span>
-                <select
-                  className="text-sm border border-gray-200 dark:border-slate-700 rounded-md px-2 py-1 bg-white dark:bg-slate-900"
-                  value={activeStoreId ?? ""}
-                  onChange={(e) => {
-                    const newId = e.target.value || null;
-                    setActiveStoreId(newId);
-                    setCustomers([]);
-                    setMessages([]);
-                    setSelected(null);
-                  }}
-                >
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
+              <span className="font-semibold">Inbox</span>
               <span className="font-semibold ml-4 truncate">
                 {selectedCustomer?.displayName || selected}
               </span>

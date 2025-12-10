@@ -44,7 +44,12 @@ export const useStore = create<AppState>()(
         lineOA: { ...state.lineOA, ...lineOA }
       })),
       setTheme: () => set({ theme: 'light' }),
-      logout: () => set({ user: null, lineOA: { connected: false } }),
+      logout: () => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('firebase_token');
+        }
+        set({ user: null, lineOA: { connected: false } });
+      },
     }),
     {
       name: 'lineboost-storage',

@@ -32,6 +32,10 @@ export function Login() {
         tier: 'growth',
         avatar: user.photoURL || undefined,
       });
+      const token = await user.getIdToken();
+      if (token && typeof window !== 'undefined') {
+        localStorage.setItem('firebase_token', token);
+      }
 
       navigate('/dashboard');
     } catch (error: any) {

@@ -22,11 +22,11 @@ interface LineOA {
 interface AppState {
   user: User | null;
   lineOA: LineOA;
-  theme: 'light' | 'dark';
+  theme: 'light';
 
   setUser: (user: User | null) => void;
   setLineOA: (lineOA: Partial<LineOA>) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: 'light') => void;
   logout: () => void;
 }
 
@@ -43,7 +43,7 @@ export const useStore = create<AppState>()(
       setLineOA: (lineOA) => set((state) => ({
         lineOA: { ...state.lineOA, ...lineOA }
       })),
-      setTheme: (theme) => set({ theme }),
+      setTheme: () => set({ theme: 'light' }),
       logout: () => set({ user: null, lineOA: { connected: false } }),
     }),
     {

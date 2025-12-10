@@ -1,4 +1,4 @@
-import { Menu, Bell, Moon, Sun } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ interface TopNavProps {
 }
 
 export function TopNav({ onMenuClick }: TopNavProps) {
-  const { user, theme, setTheme, logout } = useStore();
+  const { user, logout } = useStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -26,7 +26,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-gray-200/70 dark:border-gray-800/70 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 w-full border-b border-gray-200/70 bg-white/80 backdrop-blur-xl">
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
           <Button
@@ -38,26 +38,14 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="hidden lg:block leading-tight">
-            <p className="text-sm text-gray-500 dark:text-gray-400">แดชบอร์ดธุรกิจ</p>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+            <p className="text-sm text-gray-500">แดชบอร์ดธุรกิจ</p>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
               {user?.name ? `ยินดีต้อนรับ, ${user.name}` : 'LineBoost SME'}
             </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          >
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5" />
-            ) : (
-              <Sun className="w-5 h-5" />
-            )}
-          </Button>
-
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />

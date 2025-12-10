@@ -1,178 +1,679 @@
-import { useEffect, useState } from "react";
-import { authedJson } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { authedJson, getRecentMessages, type RecentMessage } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:3000";
 
-export default function Inbox() {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+type InboxCustomer = {
+  userId: string;
+  displayName: string;
+  pictureUrl?: string | null;
+  lastMessage?: string | null;
+  lastTime?: string | Date | number | null;
+};
 
-  const storeId = "default-store"; // โหลดจริงจาก auth ภายหลัง
-  const selectCustomer = (id: string) => setSelected(id);
+type InboxMessage = {
+  id: string;
+  from: "user" | "ai" | "system";
+  text: string | null;
+  url?: string | null;
+  image?: { url: string };
+  timestamp: number;
+};
 
-  // 1) โหลดรายชื่อลูกค้า
-  async function loadCustomers() {
-    try {
-      const data = await authedJson<any>(
-        `/api/inbox/customers?storeId=${storeId}`
-      );
-      const rawList = data?.customers ?? data?.data?.customers ?? [];
-      // ปรับโครงสร้างเพื่อให้แน่ใจว่ามี displayName/pictureUrl ใช้งานได้เสมอ
-      const list = rawList.map((c: any) => {
-        const userId =
-          c?.userId ||
-          c?.id ||
-          c?.lineUserId ||
-          c?.uid ||
-          c?.user_id ||
-          c?.line_user_id;
+type StoreOption = {
+  id: string;
+  name: string;
+};
 
-        return {
-          ...c,
-          userId,
-          displayName:
-            c?.displayName ||
-            c?.name ||
-            c?.profile?.displayName ||
-            userId,
-          pictureUrl:
-            c?.pictureUrl ||
-            c?.avatar ||
-            c?.profile?.pictureUrl ||
-            c?.image,
-        };
-      });
-      setCustomers(list);
-    } catch (err) {
-      console.error("Failed to load customers", err);
-    }
-  }
+const detectSender = (
+  type?: string,
+  isFromUser?: boolean,
+  from?: string,
+): InboxMessage["from"] => {
+  if (from === "ai" || type?.startsWith("ai")) return "ai";
+  if (isFromUser || from === "user" || type?.startsWith("message")) return "user";
+  return "system";
+};
 
-  // 2) โหลดประวัติแชทเมื่อเลือก customer
-  async function loadChatHistory(customerId: string) {
-    try {
-      const data = await authedJson<any>(
-        `/api/inbox/history/${customerId}?storeId=${storeId}`
-      );
-      const list = data?.messages ?? data?.data?.messages ?? [];
-      setMessages(list);
-    } catch (err) {
-      console.error("Failed to load chat history", err);
-    }
-  }
+const normalizeMessage = (payload: any): InboxMessage | null => {
+  if (!payload) return null;
+  const tsRaw = payload.timestamp ?? payload.createdAt;
+  const timestamp =
+    typeof tsRaw === "number"
+      ? tsRaw
+      : tsRaw
+      ? new Date(tsRaw).getTime()
+      : Date.now();
 
-  // 3) Subscribe SSE realtime
-  function connectRealtime(customerId: string) {
-    const sse = new EventSource(
-      `${API_BASE_URL}/api/inbox/stream/${customerId}?storeId=${storeId}`
+  const text = payload.text ?? payload.messageText ?? null;
+
+  const rawUrl =
+    payload.url ||
+    payload?.image?.url ||
+    payload?.audio?.url ||
+    payload?.video?.url ||
+    payload?.file?.url ||
+    null;
+
+  const isImage =
+    typeof rawUrl === "string" &&
+    rawUrl.match(/\.(png|jpg|jpeg|gif|webp)$/i);
+  const imageUrl = payload?.image?.url || (isImage ? rawUrl : null);
+
+  return {
+    id:
+      payload.id ||
+      `${payload.type || "msg"}-${timestamp}-${Math.random()
+        .toString(36)
+        .slice(2)}`,
+    from: detectSender(payload.type, payload.isFromUser, payload.from),
+    text,
+    url: rawUrl,
+    image: imageUrl ? { url: imageUrl } : undefined,
+    timestamp,
+  };
+};
+
+const normalizeRecentLog = (
+  log: RecentMessage,
+  customerId: string,
+): InboxMessage | null => {
+  const belongsToCustomer =
+    log.fromUserId === customerId || log.toUserId === customerId;
+  if (!belongsToCustomer) return null;
+
+  const timestamp = new Date(log.timestamp).getTime();
+  const sender =
+    !log.isFromUser && (log.type?.startsWith?.("ai") ?? false)
+      ? "ai"
+      : log.isFromUser
+      ? "user"
+      : "system";
+
+  return {
+    id: log.id || `${timestamp}-recent-${log.text?.slice(0, 5)}`,
+    from: sender,
+    text: log.text,
+    timestamp,
+  };
+};
+
+const mergeMessages = (items: Array<InboxMessage | null>) => {
+  const list = items.filter(Boolean) as InboxMessage[];
+  list.sort((a, b) => a.timestamp - b.timestamp);
+
+  const merged: InboxMessage[] = [];
+  list.forEach((msg) => {
+    const dupIdx = merged.findIndex(
+      (m) =>
+        m.from === msg.from &&
+        m.text === msg.text &&
+        Math.abs(m.timestamp - msg.timestamp) <= 4000,
     );
 
-    sse.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      setMessages((prev) => [...prev, msg]);
-    };
+    if (dupIdx >= 0) {
+      const existing = merged[dupIdx];
+      const existingIsLocal = existing.id?.startsWith("local-");
+      const incomingIsLocal = msg.id?.startsWith("local-");
 
-    sse.onerror = () => {
-      console.log("SSE disconnected, retrying...");
-      sse.close();
-      setTimeout(() => connectRealtime(customerId), 2000);
-    };
+      if (existingIsLocal && !incomingIsLocal) {
+        merged[dupIdx] = msg;
+      } else if (!existingIsLocal && incomingIsLocal) {
+        // keep existing
+      } else if (msg.timestamp >= existing.timestamp) {
+        merged[dupIdx] = msg;
+      }
+    } else {
+      merged.push(msg);
+    }
+  });
 
-    return sse;
-  }
+  return merged;
+};
 
+const buildCustomers = (
+  rawList: any[],
+  logs: RecentMessage[],
+): InboxCustomer[] => {
+  const latestByUser = new Map<string, RecentMessage>();
+  logs.forEach((log) => {
+    const uid = log.isFromUser ? log.fromUserId : log.toUserId || log.fromUserId;
+    if (!uid) return;
+    const existing = latestByUser.get(uid);
+    const ts = new Date(log.timestamp).getTime();
+    const existingTs = existing ? new Date(existing.timestamp).getTime() : 0;
+    if (!existing || ts > existingTs) {
+      latestByUser.set(uid, log);
+    }
+  });
+
+  const list = rawList.map((c: any) => {
+    const userId =
+      c?.userId ||
+      c?.id ||
+      c?.lineUserId ||
+      c?.uid ||
+      c?.user_id ||
+      c?.line_user_id;
+
+    const latest = userId ? latestByUser.get(userId) : null;
+
+    return {
+      ...c,
+      userId,
+      displayName:
+        c?.displayName ||
+        c?.name ||
+        c?.profile?.displayName ||
+        userId ||
+        "ลูกค้า",
+      pictureUrl:
+        c?.pictureUrl ||
+        c?.avatar ||
+        c?.profile?.pictureUrl ||
+        c?.image,
+      lastMessage: latest?.text ?? c?.lastMessage ?? c?.latestMessage ?? null,
+      lastTime: latest?.timestamp ?? c?.lastTime ?? c?.latestTime ?? null,
+    } as InboxCustomer;
+  });
+
+  return list
+    .filter((c) => c.userId)
+    .sort((a, b) => {
+      const tsA = a.lastTime ? new Date(a.lastTime).getTime() : 0;
+      const tsB = b.lastTime ? new Date(b.lastTime).getTime() : 0;
+      return tsB - tsA;
+    });
+};
+
+export default function Inbox() {
+  const [stores, setStores] = useState<StoreOption[]>([]);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+
+  const [customers, setCustomers] = useState<InboxCustomer[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [recentLogs, setRecentLogs] = useState<RecentMessage[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [input, setInput] = useState("");
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const selectCustomer = (id: string) => setSelected(id);
+
+  // โหลดรายการ store ของ user
   useEffect(() => {
-    loadCustomers();
+    async function loadStores() {
+      try {
+        const res = await authedJson<any>("/api/stores");
+        const storesData: StoreOption[] =
+          res?.data?.stores?.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+          })) ?? [];
+
+        setStores(storesData);
+        if (!activeStoreId && storesData.length > 0) {
+          setActiveStoreId(storesData[0].id);
+        }
+      } catch (err) {
+        console.error("loadStores error", err);
+        toast.error("โหลดรายการสโตร์ไม่สำเร็จ");
+      }
+    }
+
+    loadStores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadSuggestions = useCallback(async () => {
+    if (!selected || !activeStoreId) return;
+    setLoadingSuggest(true);
+    setSuggestions([]);
+
+    try {
+      const res = await authedJson("/api/inbox/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId: activeStoreId, userId: selected }),
+      });
+
+      if ((res as any).success) {
+        setSuggestions((res as any).replies || []);
+      } else {
+        toast.error((res as any).message || "แนะนำข้อความไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("แนะนำข้อความไม่สำเร็จ");
+    } finally {
+      setLoadingSuggest(false);
+    }
+  }, [selected, activeStoreId]);
+
+  const loadCustomers = useCallback(async () => {
+    if (!activeStoreId) return;
+    try {
+      setLoadingCustomers(true);
+      const [data, recent] = await Promise.all([
+        authedJson<any>(
+          `/api/inbox/customers?storeId=${activeStoreId}`,
+        ).catch(() => ({ customers: [] })),
+        getRecentMessages().catch(() => ({ data: { items: [] } })),
+      ]);
+
+      const rawList = data?.customers ?? data?.data?.customers ?? [];
+      const recentItems = recent?.data?.items ?? [];
+      setRecentLogs(recentItems);
+
+      const list = buildCustomers(rawList, recentItems);
+      setCustomers(list);
+
+      if (!selected && list.length > 0) {
+        setSelected(list[0].userId);
+      }
+    } catch {
+      toast.error("โหลดรายชื่อลูกค้าไม่สำเร็จ");
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, [selected, activeStoreId]);
+
+  const loadChatHistory = useCallback(
+    async (customerId: string, opts: { silent?: boolean } = {}) => {
+      if (!activeStoreId) return;
+      try {
+        if (!opts.silent) setLoadingMessages(true);
+
+        const [historyRes, recentsRes] = await Promise.all([
+          authedJson<any>(
+            `/api/inbox/history/${customerId}?storeId=${activeStoreId}`,
+          ).catch(() => null),
+          recentLogs.length
+            ? Promise.resolve({ data: { items: recentLogs } })
+            : getRecentMessages().catch(() => ({ data: { items: [] } })),
+        ]);
+
+        const historyRaw =
+          historyRes?.messages ?? historyRes?.data?.messages ?? [];
+        const historyMsgs = historyRaw
+          .map(normalizeMessage)
+          .filter(Boolean) as InboxMessage[];
+
+        const relatedLogs = (recentsRes?.data?.items ?? []).map(
+          (m: RecentMessage) => normalizeRecentLog(m, customerId),
+        );
+
+        setMessages((prev) =>
+          mergeMessages([...prev, ...historyMsgs, ...relatedLogs]),
+        );
+      } catch {
+        toast.error("โหลดประวัติแชทไม่สำเร็จ");
+      } finally {
+        if (!opts.silent) setLoadingMessages(false);
+      }
+    },
+    [recentLogs, activeStoreId],
+  );
+
+  const sendMessage = useCallback(
+    async () => {
+      if (!selected || !input.trim() || !activeStoreId) return;
+      const text = input.trim();
+      setSending(true);
+      try {
+        const localMsg: InboxMessage = {
+          id: `local-${Date.now()}`,
+          from: "system",
+          text,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => mergeMessages([...prev, localMsg]));
+        setInput("");
+
+        setCustomers((prev) =>
+          prev
+            .map((c) =>
+              c.userId === selected
+                ? { ...c, lastMessage: text, lastTime: Date.now() }
+                : c,
+            )
+            .sort((a, b) => {
+              const tsA = a.lastTime ? new Date(a.lastTime).getTime() : 0;
+              const tsB = b.lastTime ? new Date(b.lastTime).getTime() : 0;
+              return tsB - tsA;
+            }),
+        );
+
+        await authedJson(
+          `/api/inbox/send/${selected}?storeId=${activeStoreId}`,
+          {
+            method: "POST",
+            body: JSON.stringify({ message: text }),
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      } catch {
+        toast.error("ส่งข้อความไม่สำเร็จ");
+      } finally {
+        setSending(false);
+      }
+    },
+    [input, selected, activeStoreId],
+  );
+
+  const connectRealtime = useCallback(
+    (customerId: string) => {
+      if (!activeStoreId) return null;
+      const sse = new EventSource(
+        `${API_BASE_URL}/api/inbox/stream/${customerId}?storeId=${activeStoreId}`,
+      );
+
+      sse.onmessage = (event) => {
+        try {
+          const msg = normalizeMessage(JSON.parse(event.data));
+          if (!msg) return;
+
+          setMessages((prev) => mergeMessages([...prev, msg]));
+
+          setCustomers((prev) => {
+            const next = prev.map((c) =>
+              c.userId === customerId
+                ? {
+                    ...c,
+                    lastMessage: msg.text ?? c.lastMessage,
+                    lastTime: msg.timestamp,
+                  }
+                : c,
+            );
+            return next.sort((a, b) => {
+              const tsA = a.lastTime ? new Date(a.lastTime).getTime() : 0;
+              const tsB = b.lastTime ? new Date(b.lastTime).getTime() : 0;
+              return tsB - tsA;
+            });
+          });
+        } catch (e) {
+          console.error("SSE Parse Error", e);
+        }
+      };
+
+      sse.onerror = () => {
+        console.log("SSE disconnected, retrying...");
+        sse.close();
+      };
+
+      return sse;
+    },
+    [activeStoreId],
+  );
+
   useEffect(() => {
-    if (!selected) return;
+    if (!activeStoreId) return;
+    loadCustomers();
+  }, [loadCustomers, activeStoreId]);
 
-    let sse: EventSource | null = null;
-
+  useEffect(() => {
+    if (!selected || !activeStoreId) return;
+    setMessages([]);
     loadChatHistory(selected);
-    sse = connectRealtime(selected);
-
+    const sse = connectRealtime(selected);
     return () => {
       sse?.close();
     };
-  }, [selected]);
+  }, [connectRealtime, loadChatHistory, selected, activeStoreId]);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.userId === selected),
+    [customers, selected],
+  );
 
   return (
-    <div className="flex h-full text-gray-900 dark:text-gray-100">
+    <div className="flex h-full text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-950">
       {/* ซ้าย: รายชื่อลูกค้า */}
-      <div className="w-64 border-r bg-white dark:bg-gray-900 border-gray-200 dark:border-slate-800">
-        <h2 className="p-3 font-bold text-lg text-gray-900 dark:text-gray-100">ลูกค้า</h2>
-        {customers.map((c, idx) => {
-          const customerId = c.userId || `customer-${idx}`;
-          return (
-          <div
-            key={customerId}
-            className={`flex items-center gap-3 p-3 border-b hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
-              selected === c.userId ? "bg-gray-100 dark:bg-slate-800/80" : ""
-            }`}
-            onClick={() => selectCustomer(customerId)}
-          >
-            <img
-              src={c.pictureUrl || "/image/default-avatar.png"}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {c.displayName || c.name || c.userId}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{c.lastMessage}</p>
+      <div className="w-64 border-r border-gray-200 dark:border-slate-800 flex flex-col">
+        <h2 className="p-4 font-bold text-lg border-b border-gray-100 dark:border-slate-800">
+          Inbox
+        </h2>
+        <div className="flex-1 overflow-y-auto">
+          {loadingCustomers && !customers.length && (
+            <div className="p-4 text-center text-sm text-gray-500">
+              Loading...
             </div>
-          </div>
-        );
-        })}
+          )}
+          {!loadingCustomers && !customers.length && (
+            <div className="p-4 text-center text-sm text-gray-500">
+              No customers found
+            </div>
+          )}
+          {customers.map((c, idx) => {
+            const customerId = c.userId || `temp-${idx}`;
+            const isSelected = selected === c.userId;
+            return (
+              <div
+                key={customerId}
+                className={`flex items-center gap-3 p-3 border-b border-gray-50 dark:border-slate-800/50 cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-blue-50 dark:bg-slate-800 border-l-4 border-l-blue-500"
+                    : "hover:bg-gray-50 dark:hover:bg-slate-900"
+                }`}
+                onClick={() => selectCustomer(customerId)}
+              >
+                <div className="relative">
+                  <img
+                    src={c.pictureUrl || "https://placehold.co/40x40?text=U"}
+                    alt="avatar"
+                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/40x40?text=?";
+                    }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline">
+                    <p
+                      className={`font-medium truncate ${
+                        isSelected
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-gray-900 dark:text-gray-200"
+                      }`}
+                    >
+                      {c.displayName}
+                    </p>
+                    {c.lastTime && (
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(c.lastTime).toLocaleTimeString("th-TH", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {c.lastMessage || "ไม่มีข้อความ"}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ขวา: ประวัติแชท */}
-      <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-white dark:bg-gray-950">
-        {!selected && (
-          <div className="text-gray-400 dark:text-gray-500 text-center mt-20">
-            เลือกลูกค้าจากด้านซ้าย
+      {/* ขวา: ส่วนแชท */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+        {!selected ? (
+          <div className="flex-1 flex flex-col">
+            {/* Header พร้อม Store selector */}
+            <div className="p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Store:</span>
+                <select
+                  className="text-sm border border-gray-200 dark:border-slate-700 rounded-md px-2 py-1 bg-white dark:bg-slate-900"
+                  value={activeStoreId ?? ""}
+                  onChange={(e) => {
+                    const newId = e.target.value || null;
+                    setActiveStoreId(newId);
+                    setCustomers([]);
+                    setMessages([]);
+                    setSelected(null);
+                  }}
+                >
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center text-gray-400 flex-col gap-2">
+              <span className="text-4xl">💬</span>
+              <p>เลือกลูกค้าเพื่อเริ่มสนทนา</p>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Header: Store selector + ชื่อลูกค้า + ปุ่ม AI */}
+            <div className="p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Store:</span>
+                <select
+                  className="text-sm border border-gray-200 dark:border-slate-700 rounded-md px-2 py-1 bg-white dark:bg-slate-900"
+                  value={activeStoreId ?? ""}
+                  onChange={(e) => {
+                    const newId = e.target.value || null;
+                    setActiveStoreId(newId);
+                    setCustomers([]);
+                    setMessages([]);
+                    setSelected(null);
+                  }}
+                >
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <span className="font-semibold ml-4 truncate">
+                {selectedCustomer?.displayName || selected}
+              </span>
+
+              <div className="ml-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={loadSuggestions}
+                  disabled={loadingSuggest || !selected}
+                >
+                  {loadingSuggest ? "AI กำลังคิด..." : "⚡ แนะนำข้อความ"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth">
+              {loadingMessages && !messages.length && (
+                <div className="text-center py-4 text-gray-400 text-sm">
+                  กำลังโหลดข้อความ...
+                </div>
+              )}
+
+              {messages.map((m) => {
+                const isAi = m.from === "ai";
+                const isUser = m.from === "user";
+
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex flex-col max-w-[75%] ${
+                      isUser ? "self-start items-start" : "self-end items-end"
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-2xl text-sm shadow-sm ${
+                        isUser
+                          ? "bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-slate-700"
+                          : isAi
+                          ? "bg-blue-600 text-white rounded-tr-none"
+                          : "bg-emerald-600 text-white rounded-tr-none"
+                      }`}
+                    >
+                      {m.text}
+                      {m.image?.url && (
+                        <img
+                          src={m.image.url}
+                          alt="att"
+                          className="mt-2 rounded-lg max-w-full"
+                        />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-400 mt-1 px-1">
+                      {isAi ? "AI • " : ""}
+                      {new Date(m.timestamp).toLocaleTimeString("th-TH", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* AI suggestions */}
+            {suggestions.length > 0 && (
+              <div className="p-3 bg-white border-t space-y-2">
+                <p className="text-sm font-semibold">AI แนะนำข้อความ:</p>
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    className="block w-full text-left p-2 bg-gray-100 rounded hover:bg-gray-200"
+                    onClick={() => setInput(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-slate-800">
+              <div className="flex gap-2">
+                <Input
+                  className="flex-1"
+                  placeholder="พิมพ์ข้อความ..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  disabled={sending}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={sending || !input.trim()}
+                  className="rounded-full w-24"
+                >
+                  {sending ? "กำลังส่ง..." : "ส่ง"}
+                </Button>
+              </div>
+            </div>
+          </>
         )}
-
-        {messages.map((m, idx) => (
-          <div
-            key={idx}
-            className={`p-3 rounded-lg max-w-xl ${
-              m.from === "user"
-                ? "bg-green-100 self-start dark:bg-emerald-900/60 dark:border dark:border-emerald-700/50"
-                : m.from === "ai"
-                ? "bg-blue-100 self-end dark:bg-slate-800/80 dark:border dark:border-blue-800/60"
-                : "bg-gray-200 self-end dark:bg-slate-700/80 dark:border dark:border-slate-600/60"
-            }`}
-          >
-            {/* ข้อความ */}
-            {m.text && <div className="text-gray-900 dark:text-gray-100">{m.text}</div>}
-
-            {/* รูปภาพ */}
-            {m.image?.url && (
-              <img
-                src={m.image.url}
-                alt="img"
-                className="rounded mt-2 max-w-xs"
-              />
-            )}
-
-            {/* ไฟล์ / วิดีโอ / เสียง */}
-            {m.url && (
-              <a
-                href={m.url}
-                target="_blank"
-                className="text-blue-600 underline block mt-2"
-              >
-                ดาวน์โหลดไฟล์
-              </a>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );

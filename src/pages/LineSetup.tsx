@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Check } from 'lucide-react';
+import { MessageSquare, Check, Link2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import QRCode from 'react-qr-code';
-import { authedJson, createLineConnect } from '@/lib/api';
+import {
+  authedJson,
+  createLineConnect,
+  getLineStatus,
+  listStores,
+  saveLineCredentials,
+  type LineStatusResponse,
+} from '@/lib/api';
+import { useStore } from '@/store/useStore';
 
 export function LineSetup() {
   const navigate = useNavigate();
@@ -18,6 +26,15 @@ export function LineSetup() {
   const [connecting, setConnecting] = useState(false);
   const [loginUrl, setLoginUrl] = useState('');
   const [connected, setConnected] = useState(false);
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeId, setStoreId] = useState<string>('');
+  const [channelAccessToken, setChannelAccessToken] = useState('');
+  const [channelSecret, setChannelSecret] = useState('');
+  const [lineUserId, setLineUserId] = useState('');
+  const [lineDisplayName, setLineDisplayName] = useState('');
+  const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const { user } = useStore();
 
   // ตรวจ query param เมื่อกลับมาจาก LINE callback
   useEffect(() => {
@@ -27,17 +44,64 @@ export function LineSetup() {
       setStep(4);
       toast.success('เชื่อมต่อ Line Official Account เรียบร้อยแล้ว');
     }
+    listStores()
+      .then((res) => {
+        const list = res?.data?.stores || res?.stores || [];
+        setStores(list);
+        if (list.length) setStoreId(list[0].id);
+      })
+      .catch((err) => {
+        console.error('load stores error', err);
+        toast.error('โหลดรายการสโตร์ไม่สำเร็จ');
+      });
+
+    const fetchStatus = async () => {
+      try {
+        setStatusLoading(true);
+        const statusRes = await getLineStatus();
+        const data = statusRes?.data;
+        setLineStatus(data);
+
+        if (data?.connected) {
+          setConnected(true);
+          setStep(4);
+          setLineUserId(data.lineAccountId || data.lineUserId || '');
+          setLineDisplayName(data.displayName || '');
+          setAccountName((prev) => data.displayName || prev || '');
+          setAccountId((prev) => data.lineAccountId || data.lineUserId || prev || '');
+        }
+      } catch (err) {
+        console.error('load line status error', err);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+
+    fetchStatus();
   }, []);
 
   // ปุ่มบน: เชื่อมต่อผ่าน LINE ในหน้านี้ (redirect ตรง)
   const handleConnect = async () => {
+    if (connected || lineStatus?.connected) {
+      toast.info('เชื่อมต่อ LINE OA แล้ว');
+      return;
+    }
     try {
       setConnecting(true);
       const res = await authedJson<{
         success?: boolean;
         data?: { loginUrl?: string; state?: string };
         message?: string;
-      }>('/api/line/connect', { method: 'POST' });
+      }>('/api/line/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: {
+            firebaseUid: user?.id,
+            storeId: storeId || undefined,
+          },
+        }),
+      });
 
       if (res && 'success' in res && res.success === false) {
         throw new Error(res.message || 'เริ่มเชื่อมต่อ LINE ไม่สำเร็จ');
@@ -60,9 +124,19 @@ export function LineSetup() {
 
   // ยิงสร้าง URL + QR ใช้ใน wizard (Step 1 → Step 2)
   const handleShowQr = async () => {
+    if (connected || lineStatus?.connected) {
+      toast.info('เชื่อมต่อ LINE OA แล้ว');
+      setStep(4);
+      return;
+    }
     try {
       setConnecting(true);
-      const { loginUrl: url } = await createLineConnect();
+      const { loginUrl: url } = await createLineConnect({
+        state: {
+          firebaseUid: user?.id,
+          storeId: storeId || undefined,
+        },
+      });
 
       if (!url) {
         throw new Error('ไม่พบ loginUrl จากเซิร์ฟเวอร์');
@@ -86,6 +160,33 @@ export function LineSetup() {
     toast.info('ดูขั้นตอนการเชื่อมต่อด้วย QR ได้ด้านล่าง');
     const el = document.getElementById('line-setup-steps');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleSaveCredentials = async () => {
+    if (!storeId) {
+      toast.error('กรุณาเลือกสโตร์');
+      return;
+    }
+    if (!channelAccessToken.trim()) {
+      toast.error('กรุณากรอก Channel Access Token');
+      return;
+    }
+    try {
+      setConnecting(true);
+      await saveLineCredentials(storeId, {
+        channelAccessToken,
+        channelSecret: channelSecret || undefined,
+        lineUserId: lineUserId || undefined,
+        displayName: lineDisplayName || undefined,
+      });
+      toast.success('บันทึกโทเคน LINE สำเร็จ');
+      const refreshed = await getLineStatus();
+      setLineStatus(refreshed.data);
+    } catch (err: any) {
+      toast.error(err?.message || 'บันทึกไม่สำเร็จ');
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const steps = [
@@ -139,9 +240,9 @@ export function LineSetup() {
                   <Button
                     size="lg"
                     onClick={handleConnect}
-                    disabled={connecting || connected}
+                    disabled={connecting || connected || lineStatus?.connected}
                   >
-                    {connected
+                    {connected || lineStatus?.connected
                       ? 'เชื่อมต่อแล้ว'
                       : connecting
                       ? 'กำลังเชื่อมต่อ...'
@@ -158,21 +259,105 @@ export function LineSetup() {
                   </Button>
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/70 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 p-5 shadow-sm min-w-[260px]">
-                <p className="text-sm text-gray-500 dark:text-gray-400">สถานะ</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Step {step} / 4
-                </h3>
-                <div className="mt-4 h-2 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#008080] to-[#00a0a0]"
-                    style={{ width: `${(step / 4) * 100}%` }}
-                  />
+              <div className="space-y-4 min-w-[280px]">
+                <div className="rounded-2xl border border-white/70 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#008080] to-emerald-500 text-white flex items-center justify-center">
+                      {statusLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link2 className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">LINE OA Status</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {lineStatus?.connected ? 'เชื่อมต่อแล้ว' : 'ยังไม่เชื่อมต่อ'}
+                      </p>
+                      {lineStatus?.connected && (
+                        <p className="text-sm text-emerald-600 dark:text-emerald-300 truncate">
+                          {lineStatus.displayName || lineDisplayName || 'LINE OA'} ({lineStatus.lineAccountId || lineStatus.lineUserId || 'ไม่พบ channelId'})
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                  {steps[step - 1]?.title}
-                </p>
+                <div className="rounded-2xl border border-white/70 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 p-5 shadow-sm">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">สถานะ</p>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Step {step} / 4
+                  </h3>
+                  <div className="mt-4 h-2 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#008080] to-[#00a0a0]"
+                      style={{ width: `${(step / 4) * 100}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    {steps[step - 1]?.title}
+                  </p>
+                </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardHeader>
+            <CardTitle>ตั้งค่าโทเคน LINE สำหรับสโตร์</CardTitle>
+            <CardDescription>รองรับหลายร้าน หลาย LINE OA โดยกรอก Channel Access Token / Secret ต่อสโตร์</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="md:col-span-1">
+                <Label>เลือกสโตร์</Label>
+                <select
+                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+                  value={storeId}
+                  onChange={(e) => setStoreId(e.target.value)}
+                >
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-1">
+                <Label>LINE OA ID (channelId)</Label>
+                <Input
+                  placeholder="1657xxxxxx"
+                  value={lineUserId}
+                  onChange={(e) => setLineUserId(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <Label>ชื่อแสดงในระบบ</Label>
+                <Input
+                  placeholder="ชื่อ OA"
+                  value={lineDisplayName}
+                  onChange={(e) => setLineDisplayName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label>Channel Access Token</Label>
+                <Input
+                  placeholder="LINE Messaging API channel access token"
+                  value={channelAccessToken}
+                  onChange={(e) => setChannelAccessToken(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Channel Secret (ถ้ามี)</Label>
+                <Input
+                  placeholder="LINE channel secret"
+                  value={channelSecret}
+                  onChange={(e) => setChannelSecret(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleSaveCredentials} disabled={connecting}>
+                {connecting ? 'กำลังบันทึก...' : 'บันทึกโทเคน LINE'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -335,11 +520,15 @@ export function LineSetup() {
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 space-y-3 border border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">ชื่อบัญชี:</span>
-                    <span className="font-semibold">{accountName || 'ร้านค้าของฉัน'}</span>
+                    <span className="font-semibold">
+                      {lineStatus?.displayName || accountName || 'ร้านค้าของฉัน'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">LINE ID:</span>
-                    <span className="font-semibold">{accountId || '@myshop'}</span>
+                    <span className="font-semibold">
+                      {lineStatus?.lineAccountId || lineStatus?.lineUserId || accountId || '@myshop'}
+                    </span>
                   </div>
                 </div>
 

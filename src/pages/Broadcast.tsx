@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Send, Sparkles, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,14 +6,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
-import { mockAIGeneratedMessages } from '@/lib/mockData';
 import { toast } from 'sonner';
+import { getLineStatus, sendBroadcast, listStores, type LineStatusResponse } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 export function Broadcast() {
   const [message, setMessage] = useState('');
   const [showAIVariants, setShowAIVariants] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  const [aiVariants, setAiVariants] = useState<string[]>([]);
+  const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeId, setStoreId] = useState<string>('');
   const { user } = useStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        setStatusLoading(true);
+        const res = await getLineStatus();
+        setLineStatus(res.data);
+      } catch (err) {
+        console.error('load line status error', err);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+    fetchStatus();
+
+    listStores()
+      .then((res) => {
+        const list = res?.data?.stores || res?.stores || [];
+        setStores(list);
+        if (list.length) setStoreId(list[0].id);
+      })
+      .catch((err) => {
+        console.error('load stores error', err);
+      });
+  }, []);
+
+  const refreshStatus = async () => {
+    try {
+      setStatusLoading(true);
+      const res = await getLineStatus();
+      setLineStatus(res.data);
+      if (res.data?.connected) {
+        toast.success('เชื่อมต่อ LINE OA แล้ว');
+      } else {
+        toast.warning('ยังไม่พบการเชื่อมต่อ LINE OA');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'ตรวจสอบสถานะไม่สำเร็จ');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   const handleGenerateAI = () => {
     if (!message.trim()) {
@@ -27,24 +77,45 @@ export function Broadcast() {
     }
 
     setShowAIVariants(true);
+    const base = message.trim() || 'สินค้าหรือโปรโมชันของคุณ';
+    setAiVariants([
+      `บอกข่าวโปรโมชั่น: ${base}\nจบด้วยลิงก์สั่งซื้อ`,
+      `ย้ำความเร่งด่วน: ${base}\nใส่โค้ดส่วนลดและเวลาหมดอายุ`,
+      `ชวนกลับมาซื้อซ้ำ: ${base}\nแถมสิทธิ์พิเศษสำหรับลูกค้าเก่า`,
+    ]);
     toast.success('สร้างข้อความด้วย AI สำเร็จ!');
   };
 
-  const handleSelectVariant = (content: string, id: string) => {
+  const handleSelectVariant = (content: string) => {
     setMessage(content);
-    setSelectedVariant(id);
+    setSelectedVariant(content);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!message.trim()) {
       toast.error('กรุณากรอกข้อความก่อนส่ง');
       return;
     }
 
-    toast.success('ส่งข้อความสำเร็จ! กำลังส่งถึงผู้ติดตาม 12,547 คน');
-    setMessage('');
-    setShowAIVariants(false);
-    setSelectedVariant(null);
+    if (!lineStatus?.connected) {
+      toast.error('กรุณาเชื่อมต่อ LINE OA ที่หน้า Line Setup ก่อนส่ง');
+      navigate('/line-setup');
+      return;
+    }
+
+    try {
+      setSending(true);
+      await sendBroadcast({ content: message, sendNow: true, storeId: storeId || undefined });
+      toast.success('ส่ง Broadcast สำเร็จ');
+      setMessage('');
+      setShowAIVariants(false);
+      setSelectedVariant(null);
+      setAiVariants([]);
+    } catch (err: any) {
+      toast.error(err?.message || 'ส่ง Broadcast ไม่สำเร็จ');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -77,15 +148,29 @@ export function Broadcast() {
                 </div>
               </div>
               <div className="rounded-2xl border border-white/70 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 p-5 shadow-sm min-w-[280px]">
-                <p className="text-sm text-gray-500 dark:text-gray-400">สรุปแคมเปญ</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-gray-700 dark:text-gray-200">ผู้รับรวม</span>
-                  <span className="text-2xl font-bold text-[#008080]">12,547</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">สถานะการส่ง</p>
+                <div className="mt-2 flex flex-col gap-1">
+                  <Badge variant="outline" className="w-fit">
+                    {statusLoading
+                      ? 'ตรวจสอบการเชื่อมต่อ...'
+                      : lineStatus?.connected
+                      ? `เชื่อมต่อแล้ว (${lineStatus.displayName || 'LINE OA'})`
+                      : 'ยังไม่เชื่อมต่อ LINE OA'}
+                  </Badge>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">
+                    {lineStatus?.connected
+                      ? 'พร้อมส่งจริงผ่าน LINE Messaging API'
+                      : 'กรุณาเชื่อมต่อ LINE OA ที่หน้า Line Setup'}
+                  </p>
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    ส่งด้วย POST /api/broadcast พร้อม Bearer Firebase ID token (ส่งทันทีเมื่อ sendNow: true)
+                  </div>
+                  <div className="mt-2">
+                    <Button size="sm" variant="outline" onClick={refreshStatus} disabled={statusLoading}>
+                      {statusLoading ? 'กำลังตรวจสอบ...' : 'ตรวจสอบสถานะอีกครั้ง'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-4 h-2 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#008080] to-[#00a0a0]" style={{ width: '68%' }} />
-                </div>
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">Engagement ล่าสุด: 68%</p>
               </div>
             </div>
           </CardContent>
@@ -99,6 +184,23 @@ export function Broadcast() {
                 <CardDescription className="text-lg">เขียนข้อความหรือใช้ AI ช่วยสร้าง</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {stores.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="store">เลือกร้าน</Label>
+                    <select
+                      id="store"
+                      className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+                      value={storeId}
+                      onChange={(e) => setStoreId(e.target.value)}
+                    >
+                      {stores.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="message">ข้อความ</Label>
                   <Textarea
@@ -130,9 +232,10 @@ export function Broadcast() {
                   <Button
                     onClick={handleSend}
                     className="flex-1"
+                    disabled={sending}
                   >
                     <Send className="w-5 h-5 mr-2" />
-                    ส่งข้อความ
+                    {sending ? 'กำลังส่ง...' : 'ส่งข้อความ'}
                   </Button>
                 </div>
               </CardContent>
@@ -142,29 +245,32 @@ export function Broadcast() {
               <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-2xl">ข้อความที่ AI สร้าง</CardTitle>
-                  <CardDescription className="text-lg">เลือกข้อความที่ต้องการใช้</CardDescription>
+                  <CardDescription className="text-lg">เลือกข้อความที่ต้องการใช้ (สร้างจากข้อความที่พิมพ์)</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {mockAIGeneratedMessages.map((variant) => (
+                  {aiVariants.length === 0 && (
+                    <p className="text-sm text-gray-500">พิมพ์ข้อความด้านบนเพื่อสร้างตัวเลือก</p>
+                  )}
+                  {aiVariants.map((variant, index) => (
                     <div
-                      key={variant.id}
+                      key={variant}
                       className={`relative p-4 rounded-xl cursor-pointer transition-all border ${
-                        selectedVariant === variant.id
+                        selectedVariant === variant
                           ? 'border-[#008080] bg-[#008080]/5 shadow-sm'
                           : 'border-gray-200 dark:border-gray-700 hover:border-[#008080]/50'
                       }`}
-                      onClick={() => handleSelectVariant(variant.content, variant.id)}
+                      onClick={() => handleSelectVariant(variant)}
                     >
-                      {selectedVariant === variant.id && (
+                      {selectedVariant === variant && (
                         <div className="absolute top-2 right-2 w-7 h-7 bg-gradient-to-r from-[#008080] to-[#00a0a0] rounded-full flex items-center justify-center shadow">
                           <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">ตัวเลือก {variant.variant}</Badge>
+                        <Badge variant="outline">ตัวเลือก {String.fromCharCode(65 + index)}</Badge>
                       </div>
                       <p className="text-base whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-                        {variant.content}
+                        {variant}
                       </p>
                     </div>
                   ))}

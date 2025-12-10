@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -15,6 +15,8 @@ import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import Inbox from "./pages/Inbox";
+import KnowledgeView from '@/pages/KnowledgeView';
+import KnowledgeEditor from '@/pages/KnowledgeEditor';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
@@ -26,14 +28,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function KnowledgeRoute() {
+  const { storeId } = useParams();
+  if (!storeId) return <Navigate to="/dashboard" replace />;
+  return <KnowledgeView storeId={storeId} />;
+}
+
+function KnowledgeEditorRoute() {
+  const { storeId } = useParams();
+  if (!storeId) return <Navigate to="/dashboard" replace />;
+  return <KnowledgeEditor storeId={storeId} />;
+}
+
 function App() {
-  const { theme, setUser, logout } = useStore();
+  const { setUser, logout } = useStore();
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-  }, [theme]);
+    root.classList.add('light');
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
@@ -74,6 +88,8 @@ function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="ab-test" element={<ABTest />} />
           <Route path="inbox" element={<Inbox />} />
+          <Route path="store/:storeId/knowledge" element={<KnowledgeRoute />} />
+          <Route path="stores/:storeId/knowledge-editor" element={<KnowledgeEditorRoute />} />
           
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

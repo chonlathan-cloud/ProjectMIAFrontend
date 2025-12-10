@@ -49,12 +49,14 @@ export async function authedJson<T = any>(
 
 // -------------------- LINE connect / callback --------------------
 
-export async function createLineConnect(): Promise<{
+export async function createLineConnect(params?: { state?: Record<string, unknown> }): Promise<{
   loginUrl: string;
   state: string;
 }> {
   const data = await authedFetch('/api/line/connect', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: params?.state ? JSON.stringify({ state: params.state }) : undefined,
   });
   // backend ของเราห่อเป็น { success, message, data: { loginUrl, state } }
   return data.data;
@@ -121,4 +123,36 @@ export async function getRecentMessages(): Promise<RecentMessagesResponse> {
 
 export async function getInboxCustomers(storeId: string) {
   return authedJson(`/api/inbox/customers?storeId=${storeId}`);
+}
+
+// -------------------- store / multi-tenant --------------------
+
+export async function listStores() {
+  return authedJson('/api/stores');
+}
+
+export async function saveLineCredentials(
+  storeId: string,
+  payload: {
+    channelAccessToken: string;
+    channelSecret?: string;
+    lineUserId?: string;
+    displayName?: string;
+  },
+) {
+  return authedJson(`/api/stores/${storeId}/line-credentials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+// -------------------- broadcast --------------------
+
+export async function sendBroadcast(payload: { content: string; sendNow?: boolean; storeId?: string }) {
+  return authedJson('/api/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, sendNow: payload.sendNow ?? true }),
+  });
 }

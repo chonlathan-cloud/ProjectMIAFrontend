@@ -14,10 +14,14 @@ import { ABTest } from '@/pages/ABTest';
 import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import StoreIntegration from '@/pages/settings/StoreIntegration';
 import Inbox from "./pages/Inbox";
 import KnowledgeView from '@/pages/KnowledgeView';
 import KnowledgeEditor from '@/pages/KnowledgeEditor';
 import Website from "@/pages/Website";
+import { SignUp } from "@/pages/SignUp";
+import { ForgotPassword } from "@/pages/ForgotPassword";
+import { ResetPassword } from "@/pages/ResetPassword";
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -85,6 +89,9 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route
           path="/"
           element={
@@ -101,6 +108,8 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="customers" element={<Customers />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="settings/store" element={<StoreIntegration />} />
+
           <Route path="ab-test" element={<ABTest />} />
           <Route path="inbox" element={<Inbox />} />
           <Route path="store/:storeId/knowledge" element={<KnowledgeRoute />} />

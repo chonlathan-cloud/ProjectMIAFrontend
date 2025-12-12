@@ -12,21 +12,29 @@ interface User {
 }
 
 interface LineOA {
-  connected: boolean;
+  connected?: boolean;
   name?: string;
   id?: string;
   followers?: number;
   responseRate?: number;
 }
 
+interface StoreInfo {
+  id: string;
+  name?: string;
+}
+
 interface AppState {
   user: User | null;
   lineOA: LineOA;
   theme: 'light';
+  store: StoreInfo | null;
 
   setUser: (user: User | null) => void;
   setLineOA: (lineOA: Partial<LineOA>) => void;
   setTheme: (theme: 'light') => void;
+  setStore: (store: StoreInfo | null) => void;
+  resetStore: () => void;
   logout: () => void;
 }
 
@@ -34,25 +42,31 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       user: null,
-      lineOA: {
-        connected: false,
-      },
+      lineOA: { connected: false },
       theme: 'light',
+      store: null,
 
       setUser: (user) => set({ user }),
-      setLineOA: (lineOA) => set((state) => ({
-        lineOA: { ...state.lineOA, ...lineOA }
-      })),
+      setLineOA: (lineOA) =>
+        set((state) => ({ lineOA: { ...state.lineOA, ...lineOA } })),
       setTheme: () => set({ theme: 'light' }),
+      setStore: (store) => set({ store }),
+      resetStore: () => set({ store: null, lineOA: { connected: false } }),
       logout: () => {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('firebase_token');
+          localStorage.removeItem('lineboost-storage'); // ⭐ สำคัญ
         }
-        set({ user: null, lineOA: { connected: false } });
+        set({ user: null, lineOA: { connected: false }, store: null });
       },
     }),
     {
       name: 'lineboost-storage',
+      partialize: (state) => ({
+        user: state.user,
+        theme: state.theme,
+      }),
     }
   )
 );
+

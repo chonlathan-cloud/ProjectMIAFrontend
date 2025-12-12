@@ -1,13 +1,15 @@
-import { Check, Crown, Zap } from 'lucide-react';
+import { Check, Crown, Zap, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
 import { tierFeatures } from '@/lib/plans';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export function Settings() {
   const { user, setUser } = useStore();
+  const navigate = useNavigate();
 
   const handleUpgrade = (tier: 'starter' | 'growth' | 'enterprise') => {
     if (user) {
@@ -54,13 +56,37 @@ export function Settings() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ตั้งค่า</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">จัดการแพ็คเกจและการตั้งค่าบัญชี</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">
+          จัดการแพ็คเกจ การตั้งค่าบัญชี และการเชื่อมต่อระบบ
+        </p>
       </div>
 
+      {/* 🔥 NEW: การเชื่อมต่อร้านค้า / LINE OA */}
+      <Card>
+        <CardHeader>
+          <CardTitle>การเชื่อมต่อร้านค้า (Store Integration)</CardTitle>
+          <CardDescription>
+            ตั้งค่า LINE OA, Channel Access Token และผูกร้านกับระบบ
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={() => navigate('/settings/store')}
+            className="w-full bg-emerald-600 text-white flex items-center gap-2"
+          >
+            <LinkIcon className="w-4 h-4" />
+            เปิดหน้าเชื่อมต่อ LINE OA / ร้านค้า
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ----------------------- แพ็คเกจเดิม ----------------------- */}
       <Card>
         <CardHeader>
           <CardTitle>แพ็คเกจปัจจุบัน</CardTitle>
-          <CardDescription>คุณกำลังใช้งานแพ็คเกจ {tierFeatures[user?.tier || 'starter'].name}</CardDescription>
+          <CardDescription>
+            คุณกำลังใช้งานแพ็คเกจ {tierFeatures[user?.tier || 'starter'].name}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
@@ -69,7 +95,9 @@ export function Settings() {
                 <Crown className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-lg">{tierFeatures[user?.tier || 'starter'].name}</h3>
+                <h3 className="font-bold text-lg">
+                  {tierFeatures[user?.tier || 'starter'].name}
+                </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   ฿{tierFeatures[user?.tier || 'starter'].price.toLocaleString()}/เดือน
                 </p>
@@ -80,8 +108,12 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* ----------------------- เลือกแพ็คเกจ ----------------------- */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">เลือกแพ็คเกจ</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          เลือกแพ็คเกจ
+        </h2>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {tiers.map((tier) => {
             const Icon = tier.icon;
@@ -104,6 +136,7 @@ export function Settings() {
                     <Badge className="bg-green-600 text-white">แพ็คเกจปัจจุบัน</Badge>
                   </div>
                 )}
+
                 <CardHeader className={tier.bgColor}>
                   <div className="flex items-center justify-between mb-2">
                     <CardTitle className="text-2xl">{tier.name}</CardTitle>
@@ -113,18 +146,24 @@ export function Settings() {
                     <span className="text-4xl font-bold">
                       {tier.price === 0 ? 'ฟรี' : `฿${tier.price.toLocaleString()}`}
                     </span>
-                    {tier.price > 0 && <span className="text-gray-500">/เดือน</span>}
+                    {tier.price > 0 && (
+                      <span className="text-gray-500">/เดือน</span>
+                    )}
                   </div>
                 </CardHeader>
+
                 <CardContent className="pt-6">
                   <ul className="space-y-3 mb-6">
                     {tier.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <Check className="w-5 h-5 text-line flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {feature}
+                        </span>
                       </li>
                     ))}
                   </ul>
+
                   <Button
                     onClick={() => handleUpgrade(tier.id)}
                     disabled={isCurrentTier}
@@ -143,6 +182,7 @@ export function Settings() {
         </div>
       </div>
 
+      {/* ----------------------- ข้อมูลบัญชี ----------------------- */}
       <Card>
         <CardHeader>
           <CardTitle>ข้อมูลบัญชี</CardTitle>
@@ -151,22 +191,28 @@ export function Settings() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">ชื่อ</p>
+              <p className="text-sm text-gray-500">ชื่อ</p>
               <p className="font-medium">{user?.name}</p>
             </div>
+
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">อีเมล</p>
+              <p className="text-sm text-gray-500">อีเมล</p>
               <p className="font-medium">{user?.email}</p>
             </div>
+
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">แพ็คเกจ</p>
-              <p className="font-medium">{tierFeatures[user?.tier || 'starter'].name}</p>
+              <p className="text-sm text-gray-500">แพ็คเกจ</p>
+              <p className="font-medium">
+                {tierFeatures[user?.tier || 'starter'].name}
+              </p>
             </div>
+
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">สถานะ</p>
+              <p className="text-sm text-gray-500">สถานะ</p>
               <Badge className="bg-green-600 text-white">ใช้งานอยู่</Badge>
             </div>
           </div>
+
           <div className="pt-4 flex gap-3">
             <Button variant="outline">แก้ไขข้อมูล</Button>
             <Button variant="outline">เปลี่ยนรหัสผ่าน</Button>
@@ -174,11 +220,13 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* ----------------------- การชำระเงิน ----------------------- */}
       <Card>
         <CardHeader>
           <CardTitle>การชำระเงิน</CardTitle>
           <CardDescription>ประวัติการชำระเงินและบิล</CardDescription>
         </CardHeader>
+
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
@@ -188,11 +236,10 @@ export function Settings() {
               </div>
               <div className="text-right">
                 <p className="font-medium">฿1,990</p>
-                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                  ชำระแล้ว
-                </Badge>
+                <Badge className="bg-green-100 text-green-800">ชำระแล้ว</Badge>
               </div>
             </div>
+
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
               <div>
                 <p className="font-medium">วันที่ 1 ต.ค. 2025</p>
@@ -200,12 +247,11 @@ export function Settings() {
               </div>
               <div className="text-right">
                 <p className="font-medium">฿1,990</p>
-                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                  ชำระแล้ว
-                </Badge>
+                <Badge className="bg-green-100 text-green-800">ชำระแล้ว</Badge>
               </div>
             </div>
           </div>
+
           <Button variant="outline" className="w-full mt-4">
             ดูประวัติทั้งหมด
           </Button>

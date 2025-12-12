@@ -9,6 +9,7 @@ import { useStore } from '@/store/useStore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 export function Login() {
   const [email, setEmail] = useState('demo@lineboost.com');
@@ -22,6 +23,15 @@ export function Login() {
 
     try {
       setLoading(true);
+
+      // reset old store/session soบัญชีใหม่ไม่ปนข้อมูล
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentStoreId');
+        localStorage.removeItem('lb_session_id');
+        localStorage.removeItem('store');
+        localStorage.removeItem('storeId');
+      }
+
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const user = credential.user;
 
@@ -56,9 +66,9 @@ export function Login() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">LineBoost SME</CardTitle>
+            <CardTitle className="text-2xl font-bold">Mia-Connect SME</CardTitle>
             <CardDescription className="text-base mt-2">
-              เข้าสู่ระบบเพื่อจัดการ Line Official Account
+              เข้าสู่ระบบ Mia-Connect Account
             </CardDescription>
           </div>
         </CardHeader>
@@ -98,12 +108,12 @@ export function Login() {
           </div>
 
           <div className="mt-6 text-center">
-            <Button variant="link" className="text-sm">
-              ลืมรหัสผ่าน?
+            <Button asChild variant="link" className="text-sm">
+              <Link to="/forgot-password">ลืมรหัสผ่าน?</Link>
             </Button>
             <span className="mx-2 text-gray-300">|</span>
-            <Button variant="link" className="text-sm">
-              สมัครสมาชิก
+            <Button asChild variant="link" className="text-sm">
+              <Link to="/signup">สมัครสมาชิก</Link>
             </Button>
           </div>
         </CardContent>

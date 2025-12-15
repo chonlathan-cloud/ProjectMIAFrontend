@@ -6,26 +6,26 @@ import {
 import {
   useCallbackRef,
   useLayoutEffect2
-} from "./chunk-UPPYEY2C.js";
+} from "./chunk-J7TZDEZ5.js";
 import {
   Primitive,
   dispatchDiscreteCustomEvent
-} from "./chunk-NOOMRGU5.js";
+} from "./chunk-UNGLLPTY.js";
 import {
   useComposedRefs
-} from "./chunk-HJVYLO6Q.js";
+} from "./chunk-2C62ELXQ.js";
 import {
   require_react_dom
-} from "./chunk-BVFTNNBD.js";
+} from "./chunk-O6UFC2EK.js";
 import {
   require_jsx_runtime
-} from "./chunk-4D3I7RGZ.js";
+} from "./chunk-SIJZV5IO.js";
 import {
   require_react
-} from "./chunk-HWMPPW7G.js";
+} from "./chunk-QQRA6HGA.js";
 import {
   __toESM
-} from "./chunk-G3PMV62Z.js";
+} from "./chunk-5WRI5ZAA.js";
 
 // node_modules/@radix-ui/primitive/dist/index.mjs
 function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
@@ -37,20 +37,8 @@ function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForD
   };
 }
 
-// node_modules/@radix-ui/react-id/dist/index.mjs
-var React = __toESM(require_react(), 1);
-var useReactId = React["useId".toString()] || (() => void 0);
-var count = 0;
-function useId(deterministicId) {
-  const [id, setId] = React.useState(useReactId());
-  useLayoutEffect2(() => {
-    if (!deterministicId) setId((reactId) => reactId ?? String(count++));
-  }, [deterministicId]);
-  return deterministicId || (id ? `radix-${id}` : "");
-}
-
 // node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs
-var React2 = __toESM(require_react(), 1);
+var React = __toESM(require_react(), 1);
 function useControllableState({
   prop,
   defaultProp,
@@ -61,7 +49,7 @@ function useControllableState({
   const isControlled = prop !== void 0;
   const value = isControlled ? prop : uncontrolledProp;
   const handleChange = useCallbackRef(onChange);
-  const setValue = React2.useCallback(
+  const setValue = React.useCallback(
     (nextValue) => {
       if (isControlled) {
         const setter = nextValue;
@@ -79,11 +67,11 @@ function useUncontrolledState({
   defaultProp,
   onChange
 }) {
-  const uncontrolledState = React2.useState(defaultProp);
+  const uncontrolledState = React.useState(defaultProp);
   const [value] = uncontrolledState;
-  const prevValueRef = React2.useRef(value);
+  const prevValueRef = React.useRef(value);
   const handleChange = useCallbackRef(onChange);
-  React2.useEffect(() => {
+  React.useEffect(() => {
     if (prevValueRef.current !== value) {
       handleChange(value);
       prevValueRef.current = value;
@@ -93,13 +81,13 @@ function useUncontrolledState({
 }
 
 // node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs
-var React4 = __toESM(require_react(), 1);
+var React3 = __toESM(require_react(), 1);
 
 // node_modules/@radix-ui/react-use-escape-keydown/dist/index.mjs
-var React3 = __toESM(require_react(), 1);
+var React2 = __toESM(require_react(), 1);
 function useEscapeKeydown(onEscapeKeyDownProp, ownerDocument = globalThis?.document) {
   const onEscapeKeyDown = useCallbackRef(onEscapeKeyDownProp);
-  React3.useEffect(() => {
+  React2.useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         onEscapeKeyDown(event);
@@ -117,12 +105,12 @@ var CONTEXT_UPDATE = "dismissableLayer.update";
 var POINTER_DOWN_OUTSIDE = "dismissableLayer.pointerDownOutside";
 var FOCUS_OUTSIDE = "dismissableLayer.focusOutside";
 var originalBodyPointerEvents;
-var DismissableLayerContext = React4.createContext({
+var DismissableLayerContext = React3.createContext({
   layers: /* @__PURE__ */ new Set(),
   layersWithOutsidePointerEventsDisabled: /* @__PURE__ */ new Set(),
   branches: /* @__PURE__ */ new Set()
 });
-var DismissableLayer = React4.forwardRef(
+var DismissableLayer = React3.forwardRef(
   (props, forwardedRef) => {
     const {
       disableOutsidePointerEvents = false,
@@ -133,10 +121,10 @@ var DismissableLayer = React4.forwardRef(
       onDismiss,
       ...layerProps
     } = props;
-    const context = React4.useContext(DismissableLayerContext);
-    const [node, setNode] = React4.useState(null);
+    const context = React3.useContext(DismissableLayerContext);
+    const [node, setNode] = React3.useState(null);
     const ownerDocument = node?.ownerDocument ?? globalThis?.document;
-    const [, force] = React4.useState({});
+    const [, force] = React3.useState({});
     const composedRefs = useComposedRefs(forwardedRef, (node2) => setNode(node2));
     const layers = Array.from(context.layers);
     const [highestLayerWithOutsidePointerEventsDisabled] = [...context.layersWithOutsidePointerEventsDisabled].slice(-1);
@@ -169,7 +157,7 @@ var DismissableLayer = React4.forwardRef(
         onDismiss();
       }
     }, ownerDocument);
-    React4.useEffect(() => {
+    React3.useEffect(() => {
       if (!node) return;
       if (disableOutsidePointerEvents) {
         if (context.layersWithOutsidePointerEventsDisabled.size === 0) {
@@ -186,7 +174,7 @@ var DismissableLayer = React4.forwardRef(
         }
       };
     }, [node, ownerDocument, disableOutsidePointerEvents, context]);
-    React4.useEffect(() => {
+    React3.useEffect(() => {
       return () => {
         if (!node) return;
         context.layers.delete(node);
@@ -194,7 +182,7 @@ var DismissableLayer = React4.forwardRef(
         dispatchUpdate();
       };
     }, [node, context]);
-    React4.useEffect(() => {
+    React3.useEffect(() => {
       const handleUpdate = () => force({});
       document.addEventListener(CONTEXT_UPDATE, handleUpdate);
       return () => document.removeEventListener(CONTEXT_UPDATE, handleUpdate);
@@ -220,11 +208,11 @@ var DismissableLayer = React4.forwardRef(
 );
 DismissableLayer.displayName = DISMISSABLE_LAYER_NAME;
 var BRANCH_NAME = "DismissableLayerBranch";
-var DismissableLayerBranch = React4.forwardRef((props, forwardedRef) => {
-  const context = React4.useContext(DismissableLayerContext);
-  const ref = React4.useRef(null);
+var DismissableLayerBranch = React3.forwardRef((props, forwardedRef) => {
+  const context = React3.useContext(DismissableLayerContext);
+  const ref = React3.useRef(null);
   const composedRefs = useComposedRefs(forwardedRef, ref);
-  React4.useEffect(() => {
+  React3.useEffect(() => {
     const node = ref.current;
     if (node) {
       context.branches.add(node);
@@ -238,10 +226,10 @@ var DismissableLayerBranch = React4.forwardRef((props, forwardedRef) => {
 DismissableLayerBranch.displayName = BRANCH_NAME;
 function usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis?.document) {
   const handlePointerDownOutside = useCallbackRef(onPointerDownOutside);
-  const isPointerInsideReactTreeRef = React4.useRef(false);
-  const handleClickRef = React4.useRef(() => {
+  const isPointerInsideReactTreeRef = React3.useRef(false);
+  const handleClickRef = React3.useRef(() => {
   });
-  React4.useEffect(() => {
+  React3.useEffect(() => {
     const handlePointerDown = (event) => {
       if (event.target && !isPointerInsideReactTreeRef.current) {
         let handleAndDispatchPointerDownOutsideEvent2 = function() {
@@ -282,8 +270,8 @@ function usePointerDownOutside(onPointerDownOutside, ownerDocument = globalThis?
 }
 function useFocusOutside(onFocusOutside, ownerDocument = globalThis?.document) {
   const handleFocusOutside = useCallbackRef(onFocusOutside);
-  const isFocusInsideReactTreeRef = React4.useRef(false);
-  React4.useEffect(() => {
+  const isFocusInsideReactTreeRef = React3.useRef(false);
+  React3.useEffect(() => {
     const handleFocus = (event) => {
       if (event.target && !isFocusInsideReactTreeRef.current) {
         const eventDetail = { originalEvent: event };
@@ -313,6 +301,34 @@ function handleAndDispatchCustomEvent(name, handler, detail, { discrete }) {
   } else {
     target.dispatchEvent(event);
   }
+}
+
+// node_modules/@radix-ui/react-focus-guards/dist/index.mjs
+var React4 = __toESM(require_react(), 1);
+var count = 0;
+function useFocusGuards() {
+  React4.useEffect(() => {
+    const edgeGuards = document.querySelectorAll("[data-radix-focus-guard]");
+    document.body.insertAdjacentElement("afterbegin", edgeGuards[0] ?? createFocusGuard());
+    document.body.insertAdjacentElement("beforeend", edgeGuards[1] ?? createFocusGuard());
+    count++;
+    return () => {
+      if (count === 1) {
+        document.querySelectorAll("[data-radix-focus-guard]").forEach((node) => node.remove());
+      }
+      count--;
+    };
+  }, []);
+}
+function createFocusGuard() {
+  const element = document.createElement("span");
+  element.setAttribute("data-radix-focus-guard", "");
+  element.tabIndex = 0;
+  element.style.outline = "none";
+  element.style.opacity = "0";
+  element.style.position = "fixed";
+  element.style.pointerEvents = "none";
+  return element;
 }
 
 // node_modules/@radix-ui/react-focus-scope/dist/index.mjs
@@ -519,53 +535,284 @@ function removeLinks(items) {
   return items.filter((item) => item.tagName !== "A");
 }
 
-// node_modules/@radix-ui/react-portal/dist/index.mjs
+// node_modules/@radix-ui/react-id/dist/index.mjs
 var React6 = __toESM(require_react(), 1);
+var useReactId = React6["useId".toString()] || (() => void 0);
+var count2 = 0;
+function useId(deterministicId) {
+  const [id, setId] = React6.useState(useReactId());
+  useLayoutEffect2(() => {
+    if (!deterministicId) setId((reactId) => reactId ?? String(count2++));
+  }, [deterministicId]);
+  return deterministicId || (id ? `radix-${id}` : "");
+}
+
+// node_modules/@radix-ui/react-portal/dist/index.mjs
+var React7 = __toESM(require_react(), 1);
 var import_react_dom = __toESM(require_react_dom(), 1);
 var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
 var PORTAL_NAME = "Portal";
-var Portal = React6.forwardRef((props, forwardedRef) => {
+var Portal = React7.forwardRef((props, forwardedRef) => {
   const { container: containerProp, ...portalProps } = props;
-  const [mounted, setMounted] = React6.useState(false);
+  const [mounted, setMounted] = React7.useState(false);
   useLayoutEffect2(() => setMounted(true), []);
   const container = containerProp || mounted && globalThis?.document?.body;
   return container ? import_react_dom.default.createPortal((0, import_jsx_runtime3.jsx)(Primitive.div, { ...portalProps, ref: forwardedRef }), container) : null;
 });
 Portal.displayName = PORTAL_NAME;
 
-// node_modules/@radix-ui/react-focus-guards/dist/index.mjs
-var React7 = __toESM(require_react(), 1);
-var count2 = 0;
-function useFocusGuards() {
-  React7.useEffect(() => {
-    const edgeGuards = document.querySelectorAll("[data-radix-focus-guard]");
-    document.body.insertAdjacentElement("afterbegin", edgeGuards[0] ?? createFocusGuard());
-    document.body.insertAdjacentElement("beforeend", edgeGuards[1] ?? createFocusGuard());
-    count2++;
-    return () => {
-      if (count2 === 1) {
-        document.querySelectorAll("[data-radix-focus-guard]").forEach((node) => node.remove());
+// node_modules/@radix-ui/react-presence/dist/index.mjs
+var React22 = __toESM(require_react(), 1);
+var React8 = __toESM(require_react(), 1);
+function useStateMachine(initialState, machine) {
+  return React8.useReducer((state, event) => {
+    const nextState = machine[state][event];
+    return nextState ?? state;
+  }, initialState);
+}
+var Presence = (props) => {
+  const { present, children } = props;
+  const presence = usePresence(present);
+  const child = typeof children === "function" ? children({ present: presence.isPresent }) : React22.Children.only(children);
+  const ref = useComposedRefs(presence.ref, getElementRef(child));
+  const forceMount = typeof children === "function";
+  return forceMount || presence.isPresent ? React22.cloneElement(child, { ref }) : null;
+};
+Presence.displayName = "Presence";
+function usePresence(present) {
+  const [node, setNode] = React22.useState();
+  const stylesRef = React22.useRef({});
+  const prevPresentRef = React22.useRef(present);
+  const prevAnimationNameRef = React22.useRef("none");
+  const initialState = present ? "mounted" : "unmounted";
+  const [state, send] = useStateMachine(initialState, {
+    mounted: {
+      UNMOUNT: "unmounted",
+      ANIMATION_OUT: "unmountSuspended"
+    },
+    unmountSuspended: {
+      MOUNT: "mounted",
+      ANIMATION_END: "unmounted"
+    },
+    unmounted: {
+      MOUNT: "mounted"
+    }
+  });
+  React22.useEffect(() => {
+    const currentAnimationName = getAnimationName(stylesRef.current);
+    prevAnimationNameRef.current = state === "mounted" ? currentAnimationName : "none";
+  }, [state]);
+  useLayoutEffect2(() => {
+    const styles = stylesRef.current;
+    const wasPresent = prevPresentRef.current;
+    const hasPresentChanged = wasPresent !== present;
+    if (hasPresentChanged) {
+      const prevAnimationName = prevAnimationNameRef.current;
+      const currentAnimationName = getAnimationName(styles);
+      if (present) {
+        send("MOUNT");
+      } else if (currentAnimationName === "none" || styles?.display === "none") {
+        send("UNMOUNT");
+      } else {
+        const isAnimating = prevAnimationName !== currentAnimationName;
+        if (wasPresent && isAnimating) {
+          send("ANIMATION_OUT");
+        } else {
+          send("UNMOUNT");
+        }
       }
-      count2--;
+      prevPresentRef.current = present;
+    }
+  }, [present, send]);
+  useLayoutEffect2(() => {
+    if (node) {
+      let timeoutId;
+      const ownerWindow = node.ownerDocument.defaultView ?? window;
+      const handleAnimationEnd = (event) => {
+        const currentAnimationName = getAnimationName(stylesRef.current);
+        const isCurrentAnimation = currentAnimationName.includes(event.animationName);
+        if (event.target === node && isCurrentAnimation) {
+          send("ANIMATION_END");
+          if (!prevPresentRef.current) {
+            const currentFillMode = node.style.animationFillMode;
+            node.style.animationFillMode = "forwards";
+            timeoutId = ownerWindow.setTimeout(() => {
+              if (node.style.animationFillMode === "forwards") {
+                node.style.animationFillMode = currentFillMode;
+              }
+            });
+          }
+        }
+      };
+      const handleAnimationStart = (event) => {
+        if (event.target === node) {
+          prevAnimationNameRef.current = getAnimationName(stylesRef.current);
+        }
+      };
+      node.addEventListener("animationstart", handleAnimationStart);
+      node.addEventListener("animationcancel", handleAnimationEnd);
+      node.addEventListener("animationend", handleAnimationEnd);
+      return () => {
+        ownerWindow.clearTimeout(timeoutId);
+        node.removeEventListener("animationstart", handleAnimationStart);
+        node.removeEventListener("animationcancel", handleAnimationEnd);
+        node.removeEventListener("animationend", handleAnimationEnd);
+      };
+    } else {
+      send("ANIMATION_END");
+    }
+  }, [node, send]);
+  return {
+    isPresent: ["mounted", "unmountSuspended"].includes(state),
+    ref: React22.useCallback((node2) => {
+      if (node2) stylesRef.current = getComputedStyle(node2);
+      setNode(node2);
+    }, [])
+  };
+}
+function getAnimationName(styles) {
+  return styles?.animationName || "none";
+}
+function getElementRef(element) {
+  let getter = Object.getOwnPropertyDescriptor(element.props, "ref")?.get;
+  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
+  if (mayWarn) {
+    return element.ref;
+  }
+  getter = Object.getOwnPropertyDescriptor(element, "ref")?.get;
+  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
+  if (mayWarn) {
+    return element.props.ref;
+  }
+  return element.props.ref || element.ref;
+}
+
+// node_modules/aria-hidden/dist/es2015/index.js
+var getDefaultParent = function(originalTarget) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  var sampleTarget = Array.isArray(originalTarget) ? originalTarget[0] : originalTarget;
+  return sampleTarget.ownerDocument.body;
+};
+var counterMap = /* @__PURE__ */ new WeakMap();
+var uncontrolledNodes = /* @__PURE__ */ new WeakMap();
+var markerMap = {};
+var lockCount = 0;
+var unwrapHost = function(node) {
+  return node && (node.host || unwrapHost(node.parentNode));
+};
+var correctTargets = function(parent, targets) {
+  return targets.map(function(target) {
+    if (parent.contains(target)) {
+      return target;
+    }
+    var correctedTarget = unwrapHost(target);
+    if (correctedTarget && parent.contains(correctedTarget)) {
+      return correctedTarget;
+    }
+    console.error("aria-hidden", target, "in not contained inside", parent, ". Doing nothing");
+    return null;
+  }).filter(function(x) {
+    return Boolean(x);
+  });
+};
+var applyAttributeToOthers = function(originalTarget, parentNode, markerName, controlAttribute) {
+  var targets = correctTargets(parentNode, Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
+  if (!markerMap[markerName]) {
+    markerMap[markerName] = /* @__PURE__ */ new WeakMap();
+  }
+  var markerCounter = markerMap[markerName];
+  var hiddenNodes = [];
+  var elementsToKeep = /* @__PURE__ */ new Set();
+  var elementsToStop = new Set(targets);
+  var keep = function(el) {
+    if (!el || elementsToKeep.has(el)) {
+      return;
+    }
+    elementsToKeep.add(el);
+    keep(el.parentNode);
+  };
+  targets.forEach(keep);
+  var deep = function(parent) {
+    if (!parent || elementsToStop.has(parent)) {
+      return;
+    }
+    Array.prototype.forEach.call(parent.children, function(node) {
+      if (elementsToKeep.has(node)) {
+        deep(node);
+      } else {
+        try {
+          var attr = node.getAttribute(controlAttribute);
+          var alreadyHidden = attr !== null && attr !== "false";
+          var counterValue = (counterMap.get(node) || 0) + 1;
+          var markerValue = (markerCounter.get(node) || 0) + 1;
+          counterMap.set(node, counterValue);
+          markerCounter.set(node, markerValue);
+          hiddenNodes.push(node);
+          if (counterValue === 1 && alreadyHidden) {
+            uncontrolledNodes.set(node, true);
+          }
+          if (markerValue === 1) {
+            node.setAttribute(markerName, "true");
+          }
+          if (!alreadyHidden) {
+            node.setAttribute(controlAttribute, "true");
+          }
+        } catch (e) {
+          console.error("aria-hidden: cannot operate on ", node, e);
+        }
+      }
+    });
+  };
+  deep(parentNode);
+  elementsToKeep.clear();
+  lockCount++;
+  return function() {
+    hiddenNodes.forEach(function(node) {
+      var counterValue = counterMap.get(node) - 1;
+      var markerValue = markerCounter.get(node) - 1;
+      counterMap.set(node, counterValue);
+      markerCounter.set(node, markerValue);
+      if (!counterValue) {
+        if (!uncontrolledNodes.has(node)) {
+          node.removeAttribute(controlAttribute);
+        }
+        uncontrolledNodes.delete(node);
+      }
+      if (!markerValue) {
+        node.removeAttribute(markerName);
+      }
+    });
+    lockCount--;
+    if (!lockCount) {
+      counterMap = /* @__PURE__ */ new WeakMap();
+      counterMap = /* @__PURE__ */ new WeakMap();
+      uncontrolledNodes = /* @__PURE__ */ new WeakMap();
+      markerMap = {};
+    }
+  };
+};
+var hideOthers = function(originalTarget, parentNode, markerName) {
+  if (markerName === void 0) {
+    markerName = "data-aria-hidden";
+  }
+  var targets = Array.from(Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
+  var activeParentNode = parentNode || getDefaultParent(originalTarget);
+  if (!activeParentNode) {
+    return function() {
+      return null;
     };
-  }, []);
-}
-function createFocusGuard() {
-  const element = document.createElement("span");
-  element.setAttribute("data-radix-focus-guard", "");
-  element.tabIndex = 0;
-  element.style.outline = "none";
-  element.style.opacity = "0";
-  element.style.position = "fixed";
-  element.style.pointerEvents = "none";
-  return element;
-}
+  }
+  targets.push.apply(targets, Array.from(activeParentNode.querySelectorAll("[aria-live]")));
+  return applyAttributeToOthers(targets, activeParentNode, markerName, "aria-hidden");
+};
 
 // node_modules/react-remove-scroll/dist/es2015/Combination.js
-var React16 = __toESM(require_react());
+var React17 = __toESM(require_react());
 
 // node_modules/react-remove-scroll/dist/es2015/UI.js
-var React12 = __toESM(require_react());
+var React13 = __toESM(require_react());
 
 // node_modules/react-remove-scroll-bar/dist/es2015/constants.js
 var zeroRightClassName = "right-scroll-bar-position";
@@ -612,8 +859,8 @@ function useCallbackRef2(initialValue, callback) {
 }
 
 // node_modules/use-callback-ref/dist/es2015/useMergeRef.js
-var React8 = __toESM(require_react());
-var useIsomorphicLayoutEffect = typeof window !== "undefined" ? React8.useLayoutEffect : React8.useEffect;
+var React9 = __toESM(require_react());
+var useIsomorphicLayoutEffect = typeof window !== "undefined" ? React9.useLayoutEffect : React9.useEffect;
 var currentValues = /* @__PURE__ */ new WeakMap();
 function useMergeRefs(refs, defaultValue) {
   var callbackRef = useCallbackRef2(defaultValue || null, function(newValue) {
@@ -644,7 +891,7 @@ function useMergeRefs(refs, defaultValue) {
 }
 
 // node_modules/use-sidecar/dist/es2015/hoc.js
-var React9 = __toESM(require_react());
+var React10 = __toESM(require_react());
 
 // node_modules/use-sidecar/dist/es2015/hook.js
 var import_react2 = __toESM(require_react());
@@ -736,11 +983,11 @@ function createSidecarMedium(options) {
 }
 
 // node_modules/use-sidecar/dist/es2015/renderProp.js
-var React10 = __toESM(require_react());
+var React11 = __toESM(require_react());
 var import_react3 = __toESM(require_react());
 
 // node_modules/use-sidecar/dist/es2015/exports.js
-var React11 = __toESM(require_react());
+var React12 = __toESM(require_react());
 var SideCar = function(_a) {
   var sideCar = _a.sideCar, rest = __rest(_a, ["sideCar"]);
   if (!sideCar) {
@@ -750,7 +997,7 @@ var SideCar = function(_a) {
   if (!Target) {
     throw new Error("Sidecar medium not found");
   }
-  return React11.createElement(Target, __assign({}, rest));
+  return React12.createElement(Target, __assign({}, rest));
 };
 SideCar.isSideCarExport = true;
 function exportSidecar(medium, exported) {
@@ -765,9 +1012,9 @@ var effectCar = createSidecarMedium();
 var nothing = function() {
   return;
 };
-var RemoveScroll = React12.forwardRef(function(props, parentRef) {
-  var ref = React12.useRef(null);
-  var _a = React12.useState({
+var RemoveScroll = React13.forwardRef(function(props, parentRef) {
+  var ref = React13.useRef(null);
+  var _a = React13.useState({
     onScrollCapture: nothing,
     onWheelCapture: nothing,
     onTouchMoveCapture: nothing
@@ -776,11 +1023,11 @@ var RemoveScroll = React12.forwardRef(function(props, parentRef) {
   var SideCar2 = sideCar;
   var containerRef = useMergeRefs([ref, parentRef]);
   var containerProps = __assign(__assign({}, rest), callbacks);
-  return React12.createElement(
-    React12.Fragment,
+  return React13.createElement(
+    React13.Fragment,
     null,
-    enabled && React12.createElement(SideCar2, { sideCar: effectCar, removeScrollBar, shards, noIsolation, inert, setCallbacks, allowPinchZoom: !!allowPinchZoom, lockRef: ref, gapMode }),
-    forwardProps ? React12.cloneElement(React12.Children.only(children), __assign(__assign({}, containerProps), { ref: containerRef })) : React12.createElement(Container, __assign({}, containerProps, { className, ref: containerRef }), children)
+    enabled && React13.createElement(SideCar2, { sideCar: effectCar, removeScrollBar, shards, noIsolation, inert, setCallbacks, allowPinchZoom: !!allowPinchZoom, lockRef: ref, gapMode }),
+    forwardProps ? React13.cloneElement(React13.Children.only(children), __assign(__assign({}, containerProps), { ref: containerRef })) : React13.createElement(Container, __assign({}, containerProps, { className, ref: containerRef }), children)
   );
 });
 RemoveScroll.defaultProps = {
@@ -794,13 +1041,13 @@ RemoveScroll.classNames = {
 };
 
 // node_modules/react-remove-scroll/dist/es2015/SideEffect.js
-var React15 = __toESM(require_react());
+var React16 = __toESM(require_react());
 
 // node_modules/react-remove-scroll-bar/dist/es2015/component.js
-var React14 = __toESM(require_react());
+var React15 = __toESM(require_react());
 
 // node_modules/react-style-singleton/dist/es2015/hook.js
-var React13 = __toESM(require_react());
+var React14 = __toESM(require_react());
 
 // node_modules/get-nonce/dist/es2015/index.js
 var currentNonce;
@@ -864,7 +1111,7 @@ var stylesheetSingleton = function() {
 var styleHookSingleton = function() {
   var sheet = stylesheetSingleton();
   return function(styles, isDynamic) {
-    React13.useEffect(function() {
+    React14.useEffect(function() {
       sheet.add(styles);
       return function() {
         sheet.remove();
@@ -938,7 +1185,7 @@ var getCurrentUseCounter = function() {
   return isFinite(counter) ? counter : 0;
 };
 var useLockAttribute = function() {
-  React14.useEffect(function() {
+  React15.useEffect(function() {
     document.body.setAttribute(lockAttribute, (getCurrentUseCounter() + 1).toString());
     return function() {
       var newCounter = getCurrentUseCounter() - 1;
@@ -953,10 +1200,10 @@ var useLockAttribute = function() {
 var RemoveScrollBar = function(_a) {
   var noRelative = _a.noRelative, noImportant = _a.noImportant, _b = _a.gapMode, gapMode = _b === void 0 ? "margin" : _b;
   useLockAttribute();
-  var gap = React14.useMemo(function() {
+  var gap = React15.useMemo(function() {
     return getGapWidth(gapMode);
   }, [gapMode]);
-  return React14.createElement(Style, { styles: getStyles(gap, !noRelative, gapMode, !noImportant ? "!important" : "") });
+  return React15.createElement(Style, { styles: getStyles(gap, !noRelative, gapMode, !noImportant ? "!important" : "") });
 };
 
 // node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js
@@ -1097,16 +1344,16 @@ var generateStyle = function(id) {
 var idCounter = 0;
 var lockStack = [];
 function RemoveScrollSideCar(props) {
-  var shouldPreventQueue = React15.useRef([]);
-  var touchStartRef = React15.useRef([0, 0]);
-  var activeAxis = React15.useRef();
-  var id = React15.useState(idCounter++)[0];
-  var Style2 = React15.useState(styleSingleton)[0];
-  var lastProps = React15.useRef(props);
-  React15.useEffect(function() {
+  var shouldPreventQueue = React16.useRef([]);
+  var touchStartRef = React16.useRef([0, 0]);
+  var activeAxis = React16.useRef();
+  var id = React16.useState(idCounter++)[0];
+  var Style2 = React16.useState(styleSingleton)[0];
+  var lastProps = React16.useRef(props);
+  React16.useEffect(function() {
     lastProps.current = props;
   }, [props]);
-  React15.useEffect(function() {
+  React16.useEffect(function() {
     if (props.inert) {
       document.body.classList.add("block-interactivity-".concat(id));
       var allow_1 = __spreadArray([props.lockRef.current], (props.shards || []).map(extractRef), true).filter(Boolean);
@@ -1122,7 +1369,7 @@ function RemoveScrollSideCar(props) {
     }
     return;
   }, [props.inert, props.lockRef.current, props.shards]);
-  var shouldCancelEvent = React15.useCallback(function(event, parent) {
+  var shouldCancelEvent = React16.useCallback(function(event, parent) {
     if ("touches" in event && event.touches.length === 2 || event.type === "wheel" && event.ctrlKey) {
       return !lastProps.current.allowPinchZoom;
     }
@@ -1158,7 +1405,7 @@ function RemoveScrollSideCar(props) {
     var cancelingAxis = activeAxis.current || currentAxis;
     return handleScroll(cancelingAxis, parent, event, cancelingAxis === "h" ? deltaX : deltaY, true);
   }, []);
-  var shouldPrevent = React15.useCallback(function(_event) {
+  var shouldPrevent = React16.useCallback(function(_event) {
     var event = _event;
     if (!lockStack.length || lockStack[lockStack.length - 1] !== Style2) {
       return;
@@ -1185,7 +1432,7 @@ function RemoveScrollSideCar(props) {
       }
     }
   }, []);
-  var shouldCancel = React15.useCallback(function(name, delta, target, should) {
+  var shouldCancel = React16.useCallback(function(name, delta, target, should) {
     var event = { name, delta, target, should, shadowParent: getOutermostShadowParent(target) };
     shouldPreventQueue.current.push(event);
     setTimeout(function() {
@@ -1194,17 +1441,17 @@ function RemoveScrollSideCar(props) {
       });
     }, 1);
   }, []);
-  var scrollTouchStart = React15.useCallback(function(event) {
+  var scrollTouchStart = React16.useCallback(function(event) {
     touchStartRef.current = getTouchXY(event);
     activeAxis.current = void 0;
   }, []);
-  var scrollWheel = React15.useCallback(function(event) {
+  var scrollWheel = React16.useCallback(function(event) {
     shouldCancel(event.type, getDeltaXY(event), event.target, shouldCancelEvent(event, props.lockRef.current));
   }, []);
-  var scrollTouchMove = React15.useCallback(function(event) {
+  var scrollTouchMove = React16.useCallback(function(event) {
     shouldCancel(event.type, getTouchXY(event), event.target, shouldCancelEvent(event, props.lockRef.current));
   }, []);
-  React15.useEffect(function() {
+  React16.useEffect(function() {
     lockStack.push(Style2);
     props.setCallbacks({
       onScrollCapture: scrollWheel,
@@ -1224,11 +1471,11 @@ function RemoveScrollSideCar(props) {
     };
   }, []);
   var removeScrollBar = props.removeScrollBar, inert = props.inert;
-  return React15.createElement(
-    React15.Fragment,
+  return React16.createElement(
+    React16.Fragment,
     null,
-    inert ? React15.createElement(Style2, { styles: generateStyle(id) }) : null,
-    removeScrollBar ? React15.createElement(RemoveScrollBar, { gapMode: props.gapMode }) : null
+    inert ? React16.createElement(Style2, { styles: generateStyle(id) }) : null,
+    removeScrollBar ? React16.createElement(RemoveScrollBar, { gapMode: props.gapMode }) : null
   );
 }
 function getOutermostShadowParent(node) {
@@ -1247,142 +1494,22 @@ function getOutermostShadowParent(node) {
 var sidecar_default = exportSidecar(effectCar, RemoveScrollSideCar);
 
 // node_modules/react-remove-scroll/dist/es2015/Combination.js
-var ReactRemoveScroll = React16.forwardRef(function(props, ref) {
-  return React16.createElement(RemoveScroll, __assign({}, props, { ref, sideCar: sidecar_default }));
+var ReactRemoveScroll = React17.forwardRef(function(props, ref) {
+  return React17.createElement(RemoveScroll, __assign({}, props, { ref, sideCar: sidecar_default }));
 });
 ReactRemoveScroll.classNames = RemoveScroll.classNames;
 var Combination_default = ReactRemoveScroll;
 
-// node_modules/aria-hidden/dist/es2015/index.js
-var getDefaultParent = function(originalTarget) {
-  if (typeof document === "undefined") {
-    return null;
-  }
-  var sampleTarget = Array.isArray(originalTarget) ? originalTarget[0] : originalTarget;
-  return sampleTarget.ownerDocument.body;
-};
-var counterMap = /* @__PURE__ */ new WeakMap();
-var uncontrolledNodes = /* @__PURE__ */ new WeakMap();
-var markerMap = {};
-var lockCount = 0;
-var unwrapHost = function(node) {
-  return node && (node.host || unwrapHost(node.parentNode));
-};
-var correctTargets = function(parent, targets) {
-  return targets.map(function(target) {
-    if (parent.contains(target)) {
-      return target;
-    }
-    var correctedTarget = unwrapHost(target);
-    if (correctedTarget && parent.contains(correctedTarget)) {
-      return correctedTarget;
-    }
-    console.error("aria-hidden", target, "in not contained inside", parent, ". Doing nothing");
-    return null;
-  }).filter(function(x) {
-    return Boolean(x);
-  });
-};
-var applyAttributeToOthers = function(originalTarget, parentNode, markerName, controlAttribute) {
-  var targets = correctTargets(parentNode, Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
-  if (!markerMap[markerName]) {
-    markerMap[markerName] = /* @__PURE__ */ new WeakMap();
-  }
-  var markerCounter = markerMap[markerName];
-  var hiddenNodes = [];
-  var elementsToKeep = /* @__PURE__ */ new Set();
-  var elementsToStop = new Set(targets);
-  var keep = function(el) {
-    if (!el || elementsToKeep.has(el)) {
-      return;
-    }
-    elementsToKeep.add(el);
-    keep(el.parentNode);
-  };
-  targets.forEach(keep);
-  var deep = function(parent) {
-    if (!parent || elementsToStop.has(parent)) {
-      return;
-    }
-    Array.prototype.forEach.call(parent.children, function(node) {
-      if (elementsToKeep.has(node)) {
-        deep(node);
-      } else {
-        try {
-          var attr = node.getAttribute(controlAttribute);
-          var alreadyHidden = attr !== null && attr !== "false";
-          var counterValue = (counterMap.get(node) || 0) + 1;
-          var markerValue = (markerCounter.get(node) || 0) + 1;
-          counterMap.set(node, counterValue);
-          markerCounter.set(node, markerValue);
-          hiddenNodes.push(node);
-          if (counterValue === 1 && alreadyHidden) {
-            uncontrolledNodes.set(node, true);
-          }
-          if (markerValue === 1) {
-            node.setAttribute(markerName, "true");
-          }
-          if (!alreadyHidden) {
-            node.setAttribute(controlAttribute, "true");
-          }
-        } catch (e) {
-          console.error("aria-hidden: cannot operate on ", node, e);
-        }
-      }
-    });
-  };
-  deep(parentNode);
-  elementsToKeep.clear();
-  lockCount++;
-  return function() {
-    hiddenNodes.forEach(function(node) {
-      var counterValue = counterMap.get(node) - 1;
-      var markerValue = markerCounter.get(node) - 1;
-      counterMap.set(node, counterValue);
-      markerCounter.set(node, markerValue);
-      if (!counterValue) {
-        if (!uncontrolledNodes.has(node)) {
-          node.removeAttribute(controlAttribute);
-        }
-        uncontrolledNodes.delete(node);
-      }
-      if (!markerValue) {
-        node.removeAttribute(markerName);
-      }
-    });
-    lockCount--;
-    if (!lockCount) {
-      counterMap = /* @__PURE__ */ new WeakMap();
-      counterMap = /* @__PURE__ */ new WeakMap();
-      uncontrolledNodes = /* @__PURE__ */ new WeakMap();
-      markerMap = {};
-    }
-  };
-};
-var hideOthers = function(originalTarget, parentNode, markerName) {
-  if (markerName === void 0) {
-    markerName = "data-aria-hidden";
-  }
-  var targets = Array.from(Array.isArray(originalTarget) ? originalTarget : [originalTarget]);
-  var activeParentNode = parentNode || getDefaultParent(originalTarget);
-  if (!activeParentNode) {
-    return function() {
-      return null;
-    };
-  }
-  targets.push.apply(targets, Array.from(activeParentNode.querySelectorAll("[aria-live]")));
-  return applyAttributeToOthers(targets, activeParentNode, markerName, "aria-hidden");
-};
-
 export {
   composeEventHandlers,
-  useId,
   useControllableState,
   DismissableLayer,
-  FocusScope,
-  Portal,
   useFocusGuards,
-  Combination_default,
-  hideOthers
+  FocusScope,
+  useId,
+  Portal,
+  Presence,
+  hideOthers,
+  Combination_default
 };
-//# sourceMappingURL=chunk-HUVAWXZU.js.map
+//# sourceMappingURL=chunk-LLUTKD27.js.map

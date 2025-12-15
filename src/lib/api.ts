@@ -3,6 +3,7 @@
 
 import { auth } from "./firebase";
 
+// ✅ ปรับ Base URL ให้มี /api ตามที่คุณทำมา (ถูกต้องแล้ว)
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:3000/api";
 
@@ -39,21 +40,39 @@ async function getIdToken(): Promise<string> {
 async function authedFetch(path: string, options: RequestInit = {}) {
   const token = await getIdToken();
 
-  const fullUrl = path.startsWith("http")
-    ? path
-    : `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  // ป้องกันเคสซ้ำ /api เช่น Base URL ลงท้ายด้วย /api แล้ว path ก็ขึ้นต้นด้วย /api
+  const base = API_BASE_URL.replace(/\/$/, "");
+  let normalizedPath = path;
+
+  if (!path.startsWith("http")) {
+    const needsLeadingSlash = normalizedPath.startsWith("/") ? "" : "/";
+
+    if (base.endsWith("/api") && normalizedPath.startsWith("/api")) {
+      normalizedPath = normalizedPath.replace(/^\/api/, "");
+    }
+
+    normalizedPath = `${needsLeadingSlash}${normalizedPath}`;
+  }
+
+  const fullUrl = path.startsWith("http") ? path : `${base}${normalizedPath}`;
 
   const response = await fetch(fullUrl, {
     ...options,
+    // 🔥 เพิ่มบรรทัดนี้: ห้าม Cache เด็ดขาด
+    cache: "no-store", 
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      // 🔥 เพิ่ม Header กันเหนียว
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
       ...(options.headers || {}),
     },
   });
 
   const text = await response.text();
-  let data: any = null;
+   let data: any = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch (e) {
@@ -93,7 +112,7 @@ export async function createLineConnect(params?: {
     body: params?.state ? JSON.stringify({ state: params.state }) : undefined,
   });
 
-  return res?.data;
+  return res?.data || res;
 }
 
 export async function completeLineCallback(code: string, state: string) {
@@ -128,6 +147,8 @@ export type RecentMessage = {
   text: string | null;
   isFromUser: boolean;
   timestamp: string;
+  fromUserId?: string;
+  toUserId?: string;
 };
 
 export async function getRecentMessages() {
@@ -138,11 +159,29 @@ export async function getInboxCustomers(storeId: string) {
   return authedJson(`/inbox/customers?storeId=${storeId}`);
 }
 
+// 🔥 เพิ่ม: ดึงประวัติแชท (Inbox)
+export async function getInboxHistory(customerId: string) {
+  return authedJson(`/inbox/history/${customerId}`);
+}
+
+// 🔥 เพิ่ม: ส่งข้อความตอบกลับ (Inbox)
+export async function sendInboxMessage(customerId: string, message: string) {
+  return authedJson(`/inbox/send/${customerId}`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
 // --------------------------------------------------
 // STORES (Multi-Tenant)
 // --------------------------------------------------
 export async function listStores() {
   return authedJson("/stores");
+}
+
+// 🔥 เพิ่ม: ดึงสถิติ Dashboard (สำคัญมาก!)
+export async function getStoreStats(storeId: string) {
+  return authedJson(`/stores/${storeId}/stats`);
 }
 
 export async function createStore(name: string) {
@@ -152,6 +191,12 @@ export async function createStore(name: string) {
   });
 }
 
+// 🔥 เพิ่ม: ดึงการตั้งค่า LINE (GET)
+export async function getLineCredentials(storeId: string) {
+  return authedJson(`/stores/${storeId}/line-credentials`);
+}
+
+// บันทึกการตั้งค่า LINE (POST)
 export async function saveLineCredentials(
   storeId: string,
   payload: {

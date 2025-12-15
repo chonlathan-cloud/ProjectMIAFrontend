@@ -1,157 +1,175 @@
 {
-  "hash": "831106d0",
+  "hash": "8e467d69",
   "configHash": "4ee396af",
-  "lockfileHash": "76acea9e",
-  "browserHash": "cebceb8c",
+  "lockfileHash": "2524de20",
+  "browserHash": "6a3e61bc",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "7362c68e",
+      "fileHash": "3669a021",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "bdfef0b0",
+      "fileHash": "103c8bdb",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "384beac3",
+      "fileHash": "cf721703",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "fb682b06",
+      "fileHash": "6e73dbbc",
       "needsInterop": true
     },
     "@radix-ui/react-avatar": {
       "src": "../../node_modules/@radix-ui/react-avatar/dist/index.mjs",
       "file": "@radix-ui_react-avatar.js",
-      "fileHash": "b8b9227f",
-      "needsInterop": false
-    },
-    "@radix-ui/react-dialog": {
-      "src": "../../node_modules/@radix-ui/react-dialog/dist/index.mjs",
-      "file": "@radix-ui_react-dialog.js",
-      "fileHash": "2c41a66e",
+      "fileHash": "6d0a268f",
       "needsInterop": false
     },
     "@radix-ui/react-dropdown-menu": {
       "src": "../../node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs",
       "file": "@radix-ui_react-dropdown-menu.js",
-      "fileHash": "16d8e3e6",
+      "fileHash": "0865e16c",
       "needsInterop": false
     },
     "@radix-ui/react-icons": {
       "src": "../../node_modules/@radix-ui/react-icons/dist/react-icons.esm.js",
       "file": "@radix-ui_react-icons.js",
-      "fileHash": "ccaf1a21",
+      "fileHash": "283ce479",
       "needsInterop": false
     },
     "@radix-ui/react-label": {
       "src": "../../node_modules/@radix-ui/react-label/dist/index.mjs",
       "file": "@radix-ui_react-label.js",
-      "fileHash": "b7b02d53",
+      "fileHash": "e64cc65f",
       "needsInterop": false
     },
     "@radix-ui/react-slot": {
       "src": "../../node_modules/@radix-ui/react-slot/dist/index.mjs",
       "file": "@radix-ui_react-slot.js",
-      "fileHash": "efa42109",
+      "fileHash": "e8b870fc",
       "needsInterop": false
     },
     "class-variance-authority": {
       "src": "../../node_modules/class-variance-authority/dist/index.mjs",
       "file": "class-variance-authority.js",
-      "fileHash": "6ab5754f",
+      "fileHash": "57aa3116",
       "needsInterop": false
     },
     "clsx": {
       "src": "../../node_modules/clsx/dist/clsx.mjs",
       "file": "clsx.js",
-      "fileHash": "6309ab27",
+      "fileHash": "fc8898ba",
       "needsInterop": false
     },
     "firebase/app": {
       "src": "../../node_modules/firebase/app/dist/esm/index.esm.js",
       "file": "firebase_app.js",
-      "fileHash": "7c0ec994",
+      "fileHash": "2c323f9d",
       "needsInterop": false
     },
     "firebase/auth": {
       "src": "../../node_modules/firebase/auth/dist/esm/index.esm.js",
       "file": "firebase_auth.js",
-      "fileHash": "786eeccb",
+      "fileHash": "2a048fa3",
       "needsInterop": false
     },
     "firebase/firestore": {
       "src": "../../node_modules/firebase/firestore/dist/esm/index.esm.js",
       "file": "firebase_firestore.js",
-      "fileHash": "3338679c",
+      "fileHash": "19a4ed5a",
       "needsInterop": false
     },
     "next-themes": {
       "src": "../../node_modules/next-themes/dist/index.mjs",
       "file": "next-themes.js",
-      "fileHash": "899b7238",
+      "fileHash": "e42445fe",
       "needsInterop": false
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "24b9dde6",
+      "fileHash": "3b74d56f",
       "needsInterop": true
     },
     "react-qr-code": {
       "src": "../../node_modules/react-qr-code/lib/index.js",
       "file": "react-qr-code.js",
-      "fileHash": "3ad95eb5",
+      "fileHash": "80da0df8",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "07712699",
+      "fileHash": "79626013",
       "needsInterop": false
     },
     "sonner": {
       "src": "../../node_modules/sonner/dist/index.mjs",
       "file": "sonner.js",
-      "fileHash": "12c75d20",
+      "fileHash": "a36088cc",
       "needsInterop": false
     },
     "tailwind-merge": {
       "src": "../../node_modules/tailwind-merge/dist/bundle-mjs.mjs",
       "file": "tailwind-merge.js",
-      "fileHash": "1d39d2ac",
+      "fileHash": "47890eda",
       "needsInterop": false
     },
     "zustand": {
       "src": "../../node_modules/zustand/esm/index.mjs",
       "file": "zustand.js",
-      "fileHash": "07e3be33",
+      "fileHash": "442a2f4b",
       "needsInterop": false
     },
     "zustand/middleware": {
       "src": "../../node_modules/zustand/esm/middleware.mjs",
       "file": "zustand_middleware.js",
-      "fileHash": "4615d249",
+      "fileHash": "7e16b819",
+      "needsInterop": false
+    },
+    "date-fns": {
+      "src": "../../node_modules/date-fns/index.mjs",
+      "file": "date-fns.js",
+      "fileHash": "4067ea03",
+      "needsInterop": false
+    },
+    "date-fns/locale": {
+      "src": "../../node_modules/date-fns/locale.mjs",
+      "file": "date-fns_locale.js",
+      "fileHash": "7d30a7d8",
+      "needsInterop": false
+    },
+    "@radix-ui/react-scroll-area": {
+      "src": "../../node_modules/@radix-ui/react-scroll-area/dist/index.mjs",
+      "file": "@radix-ui_react-scroll-area.js",
+      "fileHash": "a31ab6dc",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-NJ5XCI4A": {
-      "file": "chunk-NJ5XCI4A.js"
-    },
     "chunk-JMGR4S6A": {
       "file": "chunk-JMGR4S6A.js"
     },
-    "chunk-5WBFP4SE": {
-      "file": "chunk-5WBFP4SE.js"
+    "chunk-DEPKGBUF": {
+      "file": "chunk-DEPKGBUF.js"
+    },
+    "chunk-EA3IJGTN": {
+      "file": "chunk-EA3IJGTN.js"
+    },
+    "chunk-LJN5S3UY": {
+      "file": "chunk-LJN5S3UY.js"
+    },
+    "chunk-ZDVMYPJK": {
+      "file": "chunk-ZDVMYPJK.js"
     },
     "chunk-UNGLLPTY": {
       "file": "chunk-UNGLLPTY.js"
@@ -167,9 +185,6 @@
     },
     "chunk-QQRA6HGA": {
       "file": "chunk-QQRA6HGA.js"
-    },
-    "chunk-DEPKGBUF": {
-      "file": "chunk-DEPKGBUF.js"
     },
     "chunk-5WRI5ZAA": {
       "file": "chunk-5WRI5ZAA.js"

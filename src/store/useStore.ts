@@ -65,8 +65,8 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         user: state.user,
         theme: state.theme,
+        store: state.store, // เก็บ store ล่าสุดที่เลือกไว้
       }),
     }
   )
 );
-

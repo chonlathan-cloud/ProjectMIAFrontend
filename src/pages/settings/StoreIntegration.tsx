@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/store/useStore";
-import { authedJson, getLineCredentials, saveLineCredentials } from "@/lib/api";
+import { getLineCredentials, listStores, saveLineCredentials } from "@/lib/api";
 
 export default function StoreIntegration() {
   const { user, store, setStore } = useStore();
@@ -33,7 +33,7 @@ export default function StoreIntegration() {
       if (!user) return;
 
       try {
-        const res = await authedJson("/api/stores");
+        const res = await listStores();
         const list = res?.data?.stores || [];
 
         setStores(list);

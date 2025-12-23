@@ -3,10 +3,13 @@
 
 import { auth } from "./firebase";
 
-// ✅ ปรับ Base URL ให้มี /api ตามที่คุณทำมา (ถูกต้องแล้ว)
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:3000/api";
-
+/**
+ * IMPORTANT:
+ * - Production: ใช้ relative path (/api/...) ผ่าน default base "/api"
+ * - Dev / Preview: สามารถ override ด้วย VITE_API_BASE_URL (ควรชี้ถึง /api)
+ * - ❌ ห้าม fallback ไป localhost เด็ดขาด
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const TOKEN_STORAGE_KEY = "firebase_token";
 
 // --------------------------------------------------
@@ -17,15 +20,13 @@ async function getIdToken(): Promise<string> {
 
   if (user) {
     const token = await user.getIdToken(true);
-
-    if (token && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
     }
-
     return token;
   }
 
-  // fallback: token จาก localStorage (กรณี reload หน้า)
+  // fallback กรณี refresh หน้า
   if (typeof window !== "undefined") {
     const cached = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (cached) return cached;
@@ -35,58 +36,47 @@ async function getIdToken(): Promise<string> {
 }
 
 // --------------------------------------------------
-// INTERNAL: Fetch with Auth Header
+// INTERNAL: Authenticated fetch
 // --------------------------------------------------
 async function authedFetch(path: string, options: RequestInit = {}) {
   const token = await getIdToken();
 
-  // ป้องกันเคสซ้ำ /api เช่น Base URL ลงท้ายด้วย /api แล้ว path ก็ขึ้นต้นด้วย /api
   const base = API_BASE_URL.replace(/\/$/, "");
-  let normalizedPath = path;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = path.startsWith("http") ? path : `${base}${normalizedPath}`;
 
-  if (!path.startsWith("http")) {
-    const needsLeadingSlash = normalizedPath.startsWith("/") ? "" : "/";
-
-    if (base.endsWith("/api") && normalizedPath.startsWith("/api")) {
-      normalizedPath = normalizedPath.replace(/^\/api/, "");
-    }
-
-    normalizedPath = `${needsLeadingSlash}${normalizedPath}`;
-  }
-
-  const fullUrl = path.startsWith("http") ? path : `${base}${normalizedPath}`;
-
-  const response = await fetch(fullUrl, {
+  const response = await fetch(url, {
     ...options,
-    // 🔥 เพิ่มบรรทัดนี้: ห้าม Cache เด็ดขาด
-    cache: "no-store", 
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      // 🔥 เพิ่ม Header กันเหนียว
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
+      Pragma: "no-cache",
+      Expires: "0",
       ...(options.headers || {}),
     },
   });
 
   const text = await response.text();
-   let data: any = null;
+  let data: any = null;
+
   try {
     data = text ? JSON.parse(text) : null;
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid JSON from server: ${text}`);
   }
 
   if (!response.ok) {
-    throw new Error(data?.message || text || "Request failed");
+    throw new Error(data?.message || "Request failed");
   }
 
   return data;
 }
 
-// public API wrapper
+// --------------------------------------------------
+// PUBLIC WRAPPER
+// --------------------------------------------------
 export async function authedJson<T = any>(
   path: string,
   options: RequestInit = {}
@@ -95,33 +85,28 @@ export async function authedJson<T = any>(
 }
 
 // --------------------------------------------------
-// AUTH DEBUG
+// AUTH
 // --------------------------------------------------
 export async function getMe() {
   return authedJson("/auth/me");
 }
 
 // --------------------------------------------------
-// LINE OA Connect & Callback
+// LINE OA
 // --------------------------------------------------
 export async function createLineConnect(params?: {
   state?: Record<string, unknown>;
-}): Promise<{ loginUrl: string; state: string }> {
-  const res = await authedFetch("/line/connect", {
+}) {
+  return authedJson("/line/connect", {
     method: "POST",
     body: params?.state ? JSON.stringify({ state: params.state }) : undefined,
   });
-
-  return res?.data || res;
 }
 
 export async function completeLineCallback(code: string, state: string) {
-  return authedFetch(`/line/callback?code=${code}&state=${state}`);
+  return authedJson(`/line/callback?code=${code}&state=${state}`);
 }
 
-// --------------------------------------------------
-// LINE OA Status
-// --------------------------------------------------
 export type LineStatusResponse = {
   success: boolean;
   message: string;
@@ -139,18 +124,8 @@ export async function getLineStatus(): Promise<LineStatusResponse> {
 }
 
 // --------------------------------------------------
-// Recent Messages / Inbox
+// INBOX / MESSAGES
 // --------------------------------------------------
-export type RecentMessage = {
-  id: string;
-  type: string;
-  text: string | null;
-  isFromUser: boolean;
-  timestamp: string;
-  fromUserId?: string;
-  toUserId?: string;
-};
-
 export async function getRecentMessages() {
   return authedJson("/dashboard/recent-messages");
 }
@@ -159,12 +134,10 @@ export async function getInboxCustomers(storeId: string) {
   return authedJson(`/inbox/customers?storeId=${storeId}`);
 }
 
-// 🔥 เพิ่ม: ดึงประวัติแชท (Inbox)
 export async function getInboxHistory(customerId: string) {
   return authedJson(`/inbox/history/${customerId}`);
 }
 
-// 🔥 เพิ่ม: ส่งข้อความตอบกลับ (Inbox)
 export async function sendInboxMessage(customerId: string, message: string) {
   return authedJson(`/inbox/send/${customerId}`, {
     method: "POST",
@@ -173,13 +146,12 @@ export async function sendInboxMessage(customerId: string, message: string) {
 }
 
 // --------------------------------------------------
-// STORES (Multi-Tenant)
+// STORES
 // --------------------------------------------------
 export async function listStores() {
   return authedJson("/stores");
 }
 
-// 🔥 เพิ่ม: ดึงสถิติ Dashboard (สำคัญมาก!)
 export async function getStoreStats(storeId: string) {
   return authedJson(`/stores/${storeId}/stats`);
 }
@@ -191,12 +163,10 @@ export async function createStore(name: string) {
   });
 }
 
-// 🔥 เพิ่ม: ดึงการตั้งค่า LINE (GET)
 export async function getLineCredentials(storeId: string) {
   return authedJson(`/stores/${storeId}/line-credentials`);
 }
 
-// บันทึกการตั้งค่า LINE (POST)
 export async function saveLineCredentials(
   storeId: string,
   payload: {
@@ -222,6 +192,9 @@ export async function sendBroadcast(payload: {
 }) {
   return authedJson("/broadcast", {
     method: "POST",
-    body: JSON.stringify({ ...payload, sendNow: payload.sendNow ?? true }),
+    body: JSON.stringify({
+      ...payload,
+      sendNow: payload.sendNow ?? true,
+    }),
   });
 }

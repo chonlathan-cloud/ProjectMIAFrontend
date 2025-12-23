@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"; // เพิ่ม Badge
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
-import { authedJson } from "@/lib/api";
+import { getStoreStats, listStores } from "@/lib/api";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export function Dashboard() {
 
       try {
         setLoading(true);
-        const res = await authedJson("/api/stores");
+        const res = await listStores();
 
         // เช็ค structure response ให้ดี (เผื่อ backend ส่งมาเป็น res.stores หรือ res.data.stores)
         const list = res?.data?.stores || res?.stores || [];
@@ -147,7 +147,7 @@ function DashboardMainUI({ storeId, storeName }: { storeId: string; storeName: s
     try {
       setLoadingStats(true);
       // เรียก API ที่เราเพิ่งสร้างใน storeController
-      const res = await authedJson(`/api/stores/${storeId}/stats`);
+      const res = await getStoreStats(storeId);
       
       if (res.success && res.stats) {
         setStats(res.stats);

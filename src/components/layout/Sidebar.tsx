@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
+import { Globe } from "lucide-react";
 
 interface SidebarProps {
   open: boolean;
@@ -14,6 +15,7 @@ const navItems = [
   { path: '/line-setup', icon: MessageSquare, label: 'ตั้งค่า Line OA' },
   { path: '/broadcast', icon: Send, label: 'ส่งข้อความ' },
   { path: '/analytics', icon: BarChart3, label: 'รายงานสถิติ' },
+  { path: "/website", icon: Globe, label: "Website" },
   { path: '/customers', icon: Users, label: 'ลูกค้า' },
   { path: '/inbox', icon: MessageSquare, label: 'กล่องข้อความ' },
   { path: '/ab-test', icon: TestTube2, label: 'A/B Testing' },

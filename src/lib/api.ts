@@ -1,85 +1,111 @@
 // src/lib/api.ts
-import { auth } from './firebase';
+// SaaS-ready API utilities for ConnectBridge / LineBoost
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:3000';
+import { auth } from "./firebase";
 
-// -------------------- core helpers --------------------
+/**
+ * IMPORTANT:
+ * - Production: ใช้ relative path (/api/...) ผ่าน default base "/api"
+ * - Dev / Preview: สามารถ override ด้วย VITE_API_BASE_URL (ควรชี้ถึง /api)
+ * - ❌ ห้าม fallback ไป localhost เด็ดขาด
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const TOKEN_STORAGE_KEY = "firebase_token";
 
+// --------------------------------------------------
+// INTERNAL: Get fresh Firebase ID Token
+// --------------------------------------------------
 async function getIdToken(): Promise<string> {
   const user = auth.currentUser;
-  if (!user) {
-    throw new Error('No authenticated user');
+
+  if (user) {
+    const token = await user.getIdToken(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    }
+    return token;
   }
-  const token = await user.getIdToken();
-  if (!token) {
-    throw new Error('Failed to get ID token');
+
+  // fallback กรณี refresh หน้า
+  if (typeof window !== "undefined") {
+    const cached = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (cached) return cached;
   }
-  return token;
+
+  throw new Error("No authenticated user");
 }
 
+// --------------------------------------------------
+// INTERNAL: Authenticated fetch
+// --------------------------------------------------
 async function authedFetch(path: string, options: RequestInit = {}) {
   const token = await getIdToken();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-    Authorization: `Bearer ${token}`,
-  };
+  const base = API_BASE_URL.replace(/\/$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = path.startsWith("http") ? path : `${base}${normalizedPath}`;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(url, {
     ...options,
-    headers,
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      ...(options.headers || {}),
+    },
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Request failed');
+  const text = await response.text();
+  let data: any = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(`Invalid JSON from server: ${text}`);
   }
 
-  return response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Request failed");
+  }
+
+  return data;
 }
 
+// --------------------------------------------------
+// PUBLIC WRAPPER
+// --------------------------------------------------
 export async function authedJson<T = any>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<T> {
   return authedFetch(path, options) as Promise<T>;
 }
 
-// -------------------- LINE connect / callback --------------------
+// --------------------------------------------------
+// AUTH
+// --------------------------------------------------
+export async function getMe() {
+  return authedJson("/auth/me");
+}
 
-export async function createLineConnect(params?: { state?: Record<string, unknown> }): Promise<{
-  loginUrl: string;
-  state: string;
-}> {
-  const data = await authedFetch('/api/line/connect', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+// --------------------------------------------------
+// LINE OA
+// --------------------------------------------------
+export async function createLineConnect(params?: {
+  state?: Record<string, unknown>;
+}) {
+  return authedJson("/line/connect", {
+    method: "POST",
     body: params?.state ? JSON.stringify({ state: params.state }) : undefined,
   });
-  // backend ของเราห่อเป็น { success, message, data: { loginUrl, state } }
-  return data.data;
 }
 
 export async function completeLineCallback(code: string, state: string) {
-  const params = new URLSearchParams({ code, state });
-  return authedFetch(`/api/line/callback?${params.toString()}`, {
-    method: 'GET',
-  });
+  return authedJson(`/line/callback?code=${code}&state=${state}`);
 }
-
-// -------------------- backend auth debug --------------------
-
-export async function getMe(): Promise<{
-  success: boolean;
-  message: string;
-  user: any;
-}> {
-  return authedJson('/api/auth/me');
-}
-
-// -------------------- LINE status --------------------
 
 export type LineStatusResponse = {
   success: boolean;
@@ -94,41 +120,51 @@ export type LineStatusResponse = {
 };
 
 export async function getLineStatus(): Promise<LineStatusResponse> {
-  return authedJson('/api/line/status');
+  return authedJson("/line/status");
 }
 
-// -------------------- recent messages --------------------
-
-export type RecentMessage = {
-  id: string;
-  type: string; // 'message' | 'reply' | 'follow' | ... (ยืดหยุ่นเป็น string ไปก่อน)
-  text: string | null;
-  isFromUser: boolean;
-  timestamp: string;
-  fromUserId?: string | null;
-  toUserId?: string | null;
-};
-
-export type RecentMessagesResponse = {
-  success: boolean;
-  message: string;
-  data: {
-    items: RecentMessage[];
-  };
-};
-
-export async function getRecentMessages(): Promise<RecentMessagesResponse> {
-  return authedJson('/api/dashboard/recent-messages');
+// --------------------------------------------------
+// INBOX / MESSAGES
+// --------------------------------------------------
+export async function getRecentMessages() {
+  return authedJson("/dashboard/recent-messages");
 }
 
 export async function getInboxCustomers(storeId: string) {
-  return authedJson(`/api/inbox/customers?storeId=${storeId}`);
+  return authedJson(`/inbox/customers?storeId=${storeId}`);
 }
 
-// -------------------- store / multi-tenant --------------------
+export async function getInboxHistory(customerId: string) {
+  return authedJson(`/inbox/history/${customerId}`);
+}
 
+export async function sendInboxMessage(customerId: string, message: string) {
+  return authedJson(`/inbox/send/${customerId}`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+// --------------------------------------------------
+// STORES
+// --------------------------------------------------
 export async function listStores() {
-  return authedJson('/api/stores');
+  return authedJson("/stores");
+}
+
+export async function getStoreStats(storeId: string) {
+  return authedJson(`/stores/${storeId}/stats`);
+}
+
+export async function createStore(name: string) {
+  return authedJson("/stores", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function getLineCredentials(storeId: string) {
+  return authedJson(`/stores/${storeId}/line-credentials`);
 }
 
 export async function saveLineCredentials(
@@ -138,21 +174,27 @@ export async function saveLineCredentials(
     channelSecret?: string;
     lineUserId?: string;
     displayName?: string;
-  },
+  }
 ) {
-  return authedJson(`/api/stores/${storeId}/line-credentials`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return authedJson(`/stores/${storeId}/line-credentials`, {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-// -------------------- broadcast --------------------
-
-export async function sendBroadcast(payload: { content: string; sendNow?: boolean; storeId?: string }) {
-  return authedJson('/api/broadcast', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...payload, sendNow: payload.sendNow ?? true }),
+// --------------------------------------------------
+// BROADCAST
+// --------------------------------------------------
+export async function sendBroadcast(payload: {
+  content: string;
+  sendNow?: boolean;
+  storeId?: string;
+}) {
+  return authedJson("/broadcast", {
+    method: "POST",
+    body: JSON.stringify({
+      ...payload,
+      sendNow: payload.sendNow ?? true,
+    }),
   });
 }

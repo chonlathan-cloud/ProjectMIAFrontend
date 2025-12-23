@@ -59,7 +59,7 @@ npm install
 npm run dev
 ```
 
-4. เปิดเบราว์เซอร์ที่ http://localhost:5173
+4. เปิดเบราว์เซอร์ที่ http://localhost:5174
 
 ## Demo Account
 

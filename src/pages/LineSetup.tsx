@@ -1,249 +1,179 @@
-// 🚨 Version นี้แก้ให้รองรับ SaaS + ผู้ใช้ใหม่แบบ 100%
 import { useEffect, useState } from "react";
+import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "sonner";
-import QRCode from "react-qr-code";
 
-import { authedJson, createLineConnect, saveLineCredentials } from "@/lib/api";
-import { useStore } from "@/store/useStore";
+/**
+ * MVP decision:
+ * - 1 ระบบ = 1 LINE OA
+ * - ใช้ token-based connection เท่านั้น
+ * - ไม่ผูก store / OAuth / QR
+ */
 
 export function LineSetup() {
   const navigate = useNavigate();
-  const { user, store } = useStore();
 
-  // ถ้ายังไม่มีร้าน ให้พาไปสร้างก่อน
-  useEffect(() => {
-    if (user && !store) {
-      toast.info("กรุณาสร้างร้านก่อนเชื่อมต่อ LINE OA");
-      navigate("/settings/store/create");
-    }
-  }, [user, store, navigate]);
-
-  const storeId = store?.id; // ⭐ ใช้ store ปัจจุบันเท่านั้น
-
-  // ---------------------------------------
-  // STATE
-  // ---------------------------------------
-  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
 
-  const [loginUrl, setLoginUrl] = useState("");
-
   const [channelAccessToken, setChannelAccessToken] = useState("");
   const [channelSecret, setChannelSecret] = useState("");
-  const [lineUserId, setLineUserId] = useState("");
   const [displayName, setDisplayName] = useState("");
 
-  // ---------------------------------------
-  // โหลดสถานะ LINE เฉพาะร้านนี้
-  // ---------------------------------------
+  // -----------------------------
+  // Load LINE OA status (PUBLIC)
+  // -----------------------------
   useEffect(() => {
-    if (!storeId) return;
-
     async function loadStatus() {
       try {
-        const fs = await authedJson(`/api/stores/${storeId}/line-credentials`, { method: "GET" });
+        const res = await fetch("/api/line/status");
+        const json = await res.json();
 
-        if (fs?.settings?.channelAccessToken) {
+        if (json?.data?.connected) {
           setConnected(true);
-          setChannelAccessToken(fs.settings.channelAccessToken);
-          setChannelSecret(fs.settings.channelSecret || "");
-          setLineUserId(fs.settings.lineUserId || "");
-          setDisplayName(fs.settings.displayName || "");
-          setStep(4);
+          setDisplayName(json.data.displayName || "LINE OA");
         }
       } catch (err) {
-        console.warn("No existing LINE OA for this store");
+        console.warn("Load LINE status failed", err);
+      } finally {
+        setLoading(false);
       }
     }
 
     loadStatus();
-  }, [storeId]);
+  }, []);
 
-  // ---------------------------------------
-  // เชื่อมต่อกับ LINE Messaging API (OAuth)
-  // ---------------------------------------
-  const handleConnect = async () => {
-    if (!storeId) return toast.error("ไม่พบ storeId");
+  // -----------------------------
+  // Connect LINE OA (token-based)
+  // -----------------------------
+const handleConnect = async () => {
+  if (!channelAccessToken.trim()) {
+    toast.error("กรุณากรอก Channel Access Token");
+    return;
+  }
 
-    try {
-      setConnecting(true);
+  try {
+    setConnecting(true);
 
-      const res = await authedJson("/api/line/connect", {
-        method: "POST",
-        body: JSON.stringify({
-          state: {
-            firebaseUid: user?.id,
-            storeId, // ⭐ พา LINE login กลับมาถูกสโตร์
-          },
-        }),
-      });
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-      if (!res?.data?.loginUrl) throw new Error("LINE connect failed");
-
-      window.location.href = res.data.loginUrl;
-    } catch (err) {
-      toast.error("เชื่อมต่อ LINE OA ไม่สำเร็จ");
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  // ---------------------------------------
-  // แสดง QR สำหรับเชื่อมต่อ OA
-  // ---------------------------------------
-  const handleShowQr = async () => {
-    if (!storeId) return;
-
-    try {
-      setConnecting(true);
-
-      const { loginUrl: url } = await createLineConnect({
-        state: {
-          firebaseUid: user?.id,
-          storeId,
-        },
-      });
-
-      if (!url) throw new Error("No loginUrl");
-
-      setLoginUrl(url);
-      setStep(2);
-    } catch (err) {
-      toast.error("สร้าง QR ไม่สำเร็จ");
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  // ---------------------------------------
-  // บันทึก Credentials
-  // ---------------------------------------
-  const handleSaveCredentials = async () => {
-    if (!storeId) return toast.error("ไม่พบสโตร์");
-
-    if (!channelAccessToken.trim()) {
-      return toast.error("กรุณากรอก Token");
+    if (!user) {
+      toast.error("กรุณาเข้าสู่ระบบก่อนเชื่อมต่อ LINE OA");
+      return;
     }
 
-    try {
-      setConnecting(true);
+    const idToken = await user.getIdToken();
 
-      await saveLineCredentials(storeId, {
+    const res = await fetch("/api/line/connect", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
         channelAccessToken,
         channelSecret,
-        lineUserId,
         displayName,
-      });
+      }),
+    });
 
-      toast.success("บันทึกข้อมูล LINE OA สำเร็จ");
-      setConnected(true);
-      setStep(4);
-    } catch (err: any) {
-      toast.error(err?.message || "บันทึกไม่สำเร็จ");
-    } finally {
-      setConnecting(false);
+    const json = await res.json();
+
+    if (!json?.success) {
+      throw new Error(json?.message || "Connect failed");
     }
-  };
 
-  // ---------------------------------------
+    toast.success("เชื่อมต่อ LINE OA สำเร็จ");
+    setConnected(true);
+  } catch (err: any) {
+    toast.error(err?.message || "เชื่อมต่อ LINE OA ไม่สำเร็จ");
+  } finally {
+    setConnecting(false);
+  }
+};
+
+
+  // -----------------------------
   // UI
-  // ---------------------------------------
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      
-      {!storeId ? (
+  // -----------------------------
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto">
         <Card className="p-6 text-center">
-          <p>กำลังสร้างร้านใหม่…</p>
+          <p>กำลังตรวจสอบสถานะ LINE OA…</p>
         </Card>
-      ) : (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>เชื่อมต่อ LINE OA กับร้าน: {store?.name}</CardTitle>
-              <CardDescription>
-                LINE OA จะผูกกับร้านนี้เท่านั้น (1 OA ต่อ 1 Store)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!connected ? (
-                <>
-                  <Button onClick={handleConnect} disabled={connecting}>
-                    {connecting ? "กำลังเชื่อมต่อ…" : "เชื่อมต่อผ่าน LINE Login"}
-                  </Button>
-                  <Button variant="outline" className="ml-3" onClick={handleShowQr}>
-                    แสดง QR เชื่อมต่อ OA
-                  </Button>
-                </>
-              ) : (
-                <p className="text-green-600 font-semibold">
-                  ✓ เชื่อมต่อแล้วกับ OA: {displayName || "(ไม่ทราบชื่อ)"}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+      </div>
+    );
+  }
 
-          {step === 2 && loginUrl && (
-            <Card>
-              <CardHeader>
-                <CardTitle>สแกน QR ด้วยแอป LINE</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center">
-                <QRCode value={loginUrl} />
-                <p className="text-gray-500 mt-4">สแกนเพื่ออนุญาตสิทธิ์ LINE OA</p>
-                <Button className="mt-4" onClick={() => setStep(3)}>
-                  ถัดไป
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>เชื่อมต่อ LINE Official Account</CardTitle>
+          <CardDescription>
+            ระบบรองรับ LINE OA 1 บัญชีต่อระบบ (เหมาะสำหรับ MVP)
+          </CardDescription>
+        </CardHeader>
 
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>กรอกข้อมูล LINE OA</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Channel Access Token</Label>
-                  <Input value={channelAccessToken} onChange={(e) => setChannelAccessToken(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Channel Secret</Label>
-                  <Input value={channelSecret} onChange={(e) => setChannelSecret(e.target.value)} />
-                </div>
-                <div>
-                  <Label>LINE OA ID</Label>
-                  <Input value={lineUserId} onChange={(e) => setLineUserId(e.target.value)} />
-                </div>
-                <div>
-                  <Label>ชื่อ OA</Label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                </div>
+        <CardContent className="space-y-4">
+          {!connected ? (
+            <>
+              <div className="space-y-2">
+                <Label>Channel Access Token (Messaging API)</Label>
+                <Input
+                  value={channelAccessToken}
+                  onChange={(e) => setChannelAccessToken(e.target.value)}
+                  placeholder="ใส่ Channel Access Token (long-lived)"
+                />
+              </div>
 
-                <Button onClick={handleSaveCredentials} disabled={connecting}>
-                  บันทึก
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+              <div className="space-y-2">
+                <Label>Channel Secret (ไม่บังคับ)</Label>
+                <Input
+                  value={channelSecret}
+                  onChange={(e) => setChannelSecret(e.target.value)}
+                  placeholder="Channel Secret (ถ้ามี)"
+                />
+              </div>
 
-          {step === 4 && (
-            <Card className="text-center p-10">
-              <h2 className="text-2xl font-bold">เชื่อมต่อสำเร็จ!</h2>
-              <p className="text-gray-600 mt-2">{displayName}</p>
-              <Button className="mt-4" onClick={() => navigate("/")}>
+              <div className="space-y-2">
+                <Label>ชื่อ LINE OA (สำหรับแสดงผล)</Label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="เช่น dev-project ai"
+                />
+              </div>
+
+              <Button onClick={handleConnect} disabled={connecting}>
+                {connecting ? "กำลังเชื่อมต่อ…" : "เชื่อมต่อ LINE OA"}
+              </Button>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-green-600 font-semibold">
+                ✓ เชื่อมต่อแล้วกับ LINE OA: {displayName}
+              </p>
+              <Button onClick={() => navigate("/")}>
                 กลับไปหน้า Dashboard
               </Button>
-            </Card>
+            </div>
           )}
-        </>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

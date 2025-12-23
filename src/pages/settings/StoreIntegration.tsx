@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/store/useStore";
-import { authedJson } from "@/lib/api";
+import { authedJson, getLineCredentials, saveLineCredentials } from "@/lib/api";
 
 export default function StoreIntegration() {
   const { user, store, setStore } = useStore();
@@ -63,9 +63,7 @@ export default function StoreIntegration() {
   // --------------------------------------------------------------
   async function loadCredentials(storeId: string) {
     try {
-      const res = await authedJson(`/api/stores/${storeId}/line-credentials`, {
-        method: "GET",
-      });
+      const res = await getLineCredentials(storeId);
 
       const settings = res?.settings || {};
 
@@ -98,17 +96,14 @@ export default function StoreIntegration() {
     setLoading(true);
 
     try {
-      const res = await authedJson(`/api/stores/${selectedStoreId}/line-credentials`, {
-        method: "POST",
-        body: JSON.stringify({
-          channelAccessToken,
-          channelSecret,
-          lineUserId,
-          displayName,
-        }),
+      const res = await saveLineCredentials(selectedStoreId, {
+        channelAccessToken,
+        channelSecret,
+        lineUserId,
+        displayName,
       });
 
-      if (!res.success) throw new Error(res.message);
+      if (res?.success === false) throw new Error(res.message);
 
       setConnected(true);
 

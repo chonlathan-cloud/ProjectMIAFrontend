@@ -5,7 +5,6 @@ import { getInboxCustomers, getInboxHistory, sendInboxMessage } from "@/lib/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, RefreshCw, User as UserIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";

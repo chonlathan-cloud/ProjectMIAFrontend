@@ -20,6 +20,7 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
+import { toast } from "sonner";
 
 /* =======================
    Page
@@ -31,7 +32,6 @@ export default function StoreSettings() {
 
   const {
     store,
-    stores,
     setActiveStoreById,
   } = useStore();
 
@@ -67,21 +67,30 @@ export default function StoreSettings() {
   /* -----------------------
      load existing settings
   ----------------------- */
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const res: any = await getLineCredentials(storeId);
-        if (res?.settings) {
-          setFormData((prev) => ({ ...prev, ...res.settings }));
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
+useEffect(() => {
+  if (!storeId) return; // guard ตั้งแต่ต้น
 
-    load();
-  }, [storeId]);
+  async function load() {
+    try {
+      setLoading(true);
+      const res: any = await getLineCredentials(storeId as string);
+      if (res?.settings) {
+        setFormData((prev) => ({
+          ...prev,
+          ...res.settings,
+        }));
+      }
+    } catch (err) {
+      console.warn("Load LINE credentials failed", err);
+      toast.error("โหลดข้อมูล LINE OA ไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  load();
+}, [storeId]);
+
 
   /* -----------------------
      save & next

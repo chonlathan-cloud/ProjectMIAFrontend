@@ -11,7 +11,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
-import { LineSetup } from '@/pages/LineSetup';
 import { LineCallback } from '@/pages/LineCallback';
 import { Broadcast } from '@/pages/Broadcast';
 import { Analytics } from '@/pages/Analytics';
@@ -28,8 +27,6 @@ import { SignUp } from '@/pages/SignUp';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { ResetPassword } from '@/pages/ResetPassword';
 
-import TenantBootstrap from '@/components/TenantBootstrap';
-
 import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -40,16 +37,12 @@ import { auth } from '@/lib/firebase';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 /* -----------------------------
-   Knowledge Routes (ยังใช้ storeId จาก URL ได้)
+   Knowledge Routes
 ----------------------------- */
 
 function KnowledgeRoute() {
@@ -69,19 +62,18 @@ function KnowledgeEditorRoute() {
 ----------------------------- */
 
 function App() {
-  // ✅ เพิ่ม setAuthReady เพื่อแก้ race condition ระหว่าง TenantBootstrap กับ Firebase auth
-  const { setUser, logout, setAuthReady } = useStore();
+  const { setUser, logout } = useStore();
 
-  /* force light theme (ตามของเดิม) */
+  /* force light theme */
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
+    const root = document.documentElement;
+    root.classList.remove('dark');
     root.classList.add('light');
   }, []);
 
   /* Firebase Auth listener */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (fbUser) => {
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         setUser({
           id: fbUser.uid,
@@ -91,32 +83,16 @@ function App() {
           avatar: fbUser.photoURL || undefined,
         });
 
-        // ✅ สำคัญ: บอกระบบว่า auth พร้อมแล้ว (ให้ TenantBootstrap เริ่มยิง /stores ได้)
-        setAuthReady(true);
-
-        fbUser
-          .getIdToken()
-          .then((token) => {
-            if (token && typeof window !== 'undefined') {
-              localStorage.setItem('firebase_token', token);
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to refresh Firebase token', err);
-          });
+        const token = await fbUser.getIdToken();
+        localStorage.setItem('firebase_token', token);
       } else {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('firebase_token');
-        }
-
-        // ✅ สำคัญ: logout แล้ว auth ต้องกลับไปไม่พร้อม
-        setAuthReady(false);
+        localStorage.removeItem('firebase_token');
         logout();
       }
     });
 
     return () => unsub();
-  }, [setUser, logout, setAuthReady]);
+  }, [setUser, logout]);
 
   return (
     <Router>
@@ -127,27 +103,20 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* ---------- Protected App ---------- */}
+        {/* ---------- Protected ---------- */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <TenantBootstrap>
-                <MainLayout />
-              </TenantBootstrap>
+              <MainLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
 
-          {/* core dashboard */}
           <Route path="dashboard" element={<Dashboard />} />
-
-          {/* LINE OA */}
-          <Route path="line-setup" element={<LineSetup />} />
           <Route path="line-callback" element={<LineCallback />} />
 
-          {/* features */}
           <Route path="broadcast" element={<Broadcast />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="customers" element={<Customers />} />
@@ -155,11 +124,9 @@ function App() {
           <Route path="ab-test" element={<ABTest />} />
           <Route path="website" element={<Website />} />
 
-          {/* settings */}
           <Route path="settings" element={<Settings />} />
           <Route path="settings/store" element={<StoreIntegration />} />
 
-          {/* knowledge (ยังรองรับหลายร้านผ่าน URL) */}
           <Route path="store/:storeId/knowledge" element={<KnowledgeRoute />} />
           <Route
             path="stores/:storeId/knowledge-editor"

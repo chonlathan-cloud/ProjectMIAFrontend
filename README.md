@@ -1,270 +1,187 @@
-# LineBoost SME
+File Path: /Users/tadapongsrilasak/clone/LineBoost/README.md
 
-LineBoost SME เป็นแพลตฟอร์ม SaaS ที่ช่วยให้ SME ไทยจัดการ Line Official Account ได้อย่างมืออาชีพ
+# LineBoost
 
-## ฟีเจอร์หลัก
+แพลตฟอร์มสำหรับจัดการ LINE OA, Broadcast, Inbox, Knowledge Base และการเชื่อมต่อร้านค้า โดยใช้ React + Vite + Firebase Auth + API แบบ `/api`.
 
-### 🎯 Core Features
-- **Dashboard แบบ Real-time**: ติดตามสถิติและผลการดำเนินงาน
-- **เชื่อมต่อ Line OA**: Wizard ง่ายๆ สำหรับเชื่อมต่อบัญชี Line Official Account
-- **ส่งข้อความแบรอดแคสต์**: ส่งข้อความถึงผู้ติดตามทั้งหมด
-- **AI Message Generator**: สร้างข้อความด้วย AI (แพ็คเกจ Growth+)
-- **Analytics & Reports**: รายงานสถิติและการวิเคราะห์ข้อมูล
-- **Customer Management**: จัดการและแบ่งกลุ่มลูกค้า
-- **A/B Testing**: ทดสอบข้อความหลายรูปแบบ (แพ็คเกจ Growth+)
+**Quick Start**
+- ติดตั้ง: `npm install`
+- รัน dev: `npm run dev`
+- Build: `npm run build`
 
-### 💎 Tier System
-- **Starter**: ฟรี - เหมาะสำหรับธุรกิจที่เริ่มต้น
-- **Growth**: ฿1,990/เดือน - สำหรับธุรกิจที่กำลังเติบโต
-- **Enterprise**: ฿4,990/เดือน - สำหรับองค์กรขนาดใหญ่
+**Environment Variables**
+- `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_STORAGE_BUCKET` / `VITE_FIREBASE_MESSAGING_SENDER_ID` / `VITE_FIREBASE_APP_ID` ใช้ใน `src/lib/firebase.ts`
+- `VITE_API_BASE_URL` override base URL สำหรับ API ใน `src/lib/api.ts` (ค่าเริ่มต้น `/api`)
+- `VITE_STORE_ID` ใช้ใน `src/pages/Website.tsx`
+- `VITE_BUILDER_URL` ใช้ใน `src/pages/Website.tsx`
 
-### 🎨 Design Features
-- Responsive Design (Mobile-first)
-- Dark/Light Mode
-- Thai Language Support (Font: Prompt, Sarabun)
-- Modern Card-based UI
-- Line Official Account Green (#00B900)
-- Mobile Bottom Navigation
+**App Flow (ไฟล์สัมพันธ์กันอย่างไร)**
+- `src/main.tsx` สร้าง React root แล้ว render `src/App.tsx`
+- `src/App.tsx` กำหนด routing ทั้งหมด + auth listener (Firebase) + Guard
+- `src/components/layout/*` เป็นโครง layout ที่ครอบทุกหน้า protected ผ่าน `MainLayout` (Sidebar/TopNav/MobileBottomNav)
+- `src/store/useStore.ts` คือ global state (user/store/lineOA) ใช้ร่วมกันทุกหน้า
+- `src/lib/api.ts` รวม API ที่เรียก `/api` พร้อมแนบ Firebase ID token
+- `src/pages/*` คือหน้า UI แต่ละ feature และเรียก `useStore` + `lib/api` ตามบริบท
 
-## Tech Stack
+**Routing Map (อ้างอิง `src/App.tsx`)**
+- Public
+  - `/login` → `src/pages/Login.tsx`
+  - `/signup` → `src/pages/SignUp.tsx`
+  - `/forgot-password` → `src/pages/ForgotPassword.tsx`
+  - `/reset-password` → `src/pages/ResetPassword.tsx`
+- Protected (ครอบด้วย `MainLayout`)
+  - `/dashboard` → `src/pages/Dashboard.tsx`
+  - `/line-callback` → `src/pages/LineCallback.tsx`
+  - `/broadcast` → `src/pages/Broadcast.tsx`
+  - `/analytics` → `src/pages/Analytics.tsx`
+  - `/customers` → `src/pages/Customers.tsx`
+  - `/inbox` → `src/pages/Inbox.tsx`
+  - `/ab-test` → `src/pages/ABTest.tsx`
+  - `/website` → `src/pages/Website.tsx`
+  - `/settings` → `src/pages/Settings.tsx`
+  - `/settings/store` → `src/pages/settings/StoreIntegration.tsx`
+  - `/store/:storeId/knowledge` → `src/pages/KnowledgeView.tsx`
+  - `/stores/:storeId/knowledge-editor` → `src/pages/KnowledgeEditor.tsx`
 
-- **Frontend Framework**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS v3.4+
-- **UI Components**: shadcn/ui
-- **Routing**: React Router v6
-- **State Management**: Zustand + localStorage persistence
-- **Charts**: Recharts
-- **Tables**: TanStack Table (React Table)
-- **Icons**: Lucide React
-- **Notifications**: Sonner (Toast)
+**Pages ที่ยังไม่ได้ผูก Route (ยังเป็น reference/legacy)**
+- `src/pages/StoreSettings.tsx` ฟอร์มเชื่อมต่อ LINE OA แบบเดิม
+- `src/pages/LineSetup.tsx` ฟอร์มเชื่อมต่อ LINE OA แบบ token-based
+- `src/pages/ConnectBridge.tsx` คู่มือฝัง script เพื่อติดตาม event
+- `src/pages/PublicSite.tsx` หน้า public site demo + tracker
+- `src/pages/WebBuilder.tsx` placeholder สำหรับ web builder
+- `src/pages/KnowledgeAIGenerator.tsx` เรียก AI สร้าง knowledge
 
-## การติดตั้ง
+**File Map (Root)**
+- `README.md` เอกสารโปรเจกต์ฉบับนี้
+- `package.json` scripts + dependencies
+- `package-lock.json` lockfile
+- `index.html` Vite entry HTML
+- `vite.config.ts` / `vite.config.cjs` Vite config (TS + CJS)
+- `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json` TypeScript config
+- `tsconfig.app.tsbuildinfo` / `tsconfig.node.tsbuildinfo` build info
+- `tailwind.config.js` Tailwind config
+- `postcss.config.js` PostCSS config
+- `eslint.config.js` ESLint config
+- `firebase.json` Firebase hosting config
+- `components.json` shadcn/ui config
+- `line-boost.sh` สคริปต์ช่วยสตาร์ท backend + db (มีส่วนซ้ำอยู่ในไฟล์เดียว)
+- `public/` ไฟล์ static
+- `dist/` output build (generated)
+- `node_modules/` dependencies (generated)
 
-### Requirements
-- Node.js 18+
-- npm หรือ yarn
+**File Map (src/ entry + global)**
+- `src/main.tsx` จุดเริ่ม React app
+- `src/App.tsx` Router + Auth listener + Guard
+- `src/App.css` สไตล์เพิ่มเติมเฉพาะ app
+- `src/index.css` global styles + Tailwind base
+- `src/vite-env.d.ts` types สำหรับ Vite
 
-### Installation Steps
+**File Map (src/lib)**
+- `src/lib/api.ts` API wrapper ทุก endpoint ใช้ Firebase token
+- `src/lib/firebase.ts` ตั้งค่า Firebase app/auth/firestore
+- `src/lib/plans.ts` ข้อมูลแพ็คเกจ + limits
+- `src/lib/tracker.ts` ยิง event tracking (ปัจจุบันชี้ localhost)
+- `src/lib/utils.ts` helper utilities
+- `src/lib/flexTemplates.ts` template ข้อความ Flex Message
 
-1. Clone repository หรือ extract ไฟล์โปรเจค
+**File Map (src/store)**
+- `src/store/useStore.ts` Zustand store หลัก (user/store/lineOA)
+- `src/store/useKnowledgeEditor.ts` Zustand store สำหรับ Knowledge Editor
 
-2. ติดตั้ง dependencies:
-```bash
-npm install
-```
+**File Map (src/hooks)**
+- `src/hooks/use-toast.ts` logic toast แบบ local state
 
-3. รันโปรเจค:
-```bash
-npm run dev
-```
+**File Map (src/components)**
+- `src/components/TenantBootstrap.tsx` โหลดรายการร้านแล้วตั้งค่า store ก่อน render children
+- `src/components/FirestoreDebug.tsx` ตัวอย่างอ่าน/เขียน Firestore
 
-4. เปิดเบราว์เซอร์ที่ http://localhost:5174
+**File Map (src/components/layout)**
+- `src/components/layout/MainLayout.tsx` Layout หลัก + Outlet
+- `src/components/layout/Sidebar.tsx` เมนูด้านซ้าย
+- `src/components/layout/TopNav.tsx` top navigation
+- `src/components/layout/MobileBottomNav.tsx` bottom nav สำหรับมือถือ
 
-## Demo Account
+**File Map (src/components/ui)**
+- `src/components/ui/accordion.tsx` Accordion wrapper (shadcn/ui)
+- `src/components/ui/alert-dialog.tsx` AlertDialog wrapper
+- `src/components/ui/alert.tsx` Alert wrapper
+- `src/components/ui/aspect-ratio.tsx` AspectRatio wrapper
+- `src/components/ui/avatar.tsx` Avatar wrapper
+- `src/components/ui/badge.tsx` Badge component
+- `src/components/ui/breadcrumb.tsx` Breadcrumb component
+- `src/components/ui/button.tsx` Button component
+- `src/components/ui/calendar.tsx` Calendar component
+- `src/components/ui/card.tsx` Card component
+- `src/components/ui/carousel.tsx` Carousel component
+- `src/components/ui/chart.tsx` Chart helper
+- `src/components/ui/checkbox.tsx` Checkbox component
+- `src/components/ui/collapsible.tsx` Collapsible component
+- `src/components/ui/command.tsx` Command palette component
+- `src/components/ui/context-menu.tsx` ContextMenu component
+- `src/components/ui/dialog.tsx` Dialog component
+- `src/components/ui/drawer.tsx` Drawer component
+- `src/components/ui/dropdown-menu.tsx` DropdownMenu component
+- `src/components/ui/form.tsx` React Hook Form helpers
+- `src/components/ui/hover-card.tsx` HoverCard component
+- `src/components/ui/input-otp.tsx` OTP input
+- `src/components/ui/input.tsx` Input component
+- `src/components/ui/label.tsx` Label component
+- `src/components/ui/menubar.tsx` Menubar component
+- `src/components/ui/navigation-menu.tsx` NavigationMenu component
+- `src/components/ui/pagination.tsx` Pagination component
+- `src/components/ui/popover.tsx` Popover component
+- `src/components/ui/progress.tsx` Progress component
+- `src/components/ui/radio-group.tsx` RadioGroup component
+- `src/components/ui/resizable.tsx` Resizable panels
+- `src/components/ui/scroll-area.tsx` ScrollArea component
+- `src/components/ui/select.tsx` Select component
+- `src/components/ui/separator.tsx` Separator component
+- `src/components/ui/sheet.tsx` Sheet component
+- `src/components/ui/skeleton.tsx` Skeleton component
+- `src/components/ui/slider.tsx` Slider component
+- `src/components/ui/sonner.tsx` Sonner toast adapter
+- `src/components/ui/switch.tsx` Switch component
+- `src/components/ui/table.tsx` Table component
+- `src/components/ui/tabs.tsx` Tabs component
+- `src/components/ui/textarea.tsx` Textarea component
+- `src/components/ui/toast.tsx` Toast component
+- `src/components/ui/toaster.tsx` Toast renderer
+- `src/components/ui/toggle-group.tsx` ToggleGroup component
+- `src/components/ui/toggle.tsx` Toggle component
+- `src/components/ui/tooltip.tsx` Tooltip component
 
-สำหรับทดสอบระบบ ใช้:
-- **Email**: demo@lineboost.com
-- **Password**: demo1234
+**File Map (src/pages)**
+- `src/pages/Login.tsx` Firebase email/password login
+- `src/pages/SignUp.tsx` สมัครสมาชิก (Firebase)
+- `src/pages/ForgotPassword.tsx` ขอรีเซ็ตรหัสผ่าน
+- `src/pages/ResetPassword.tsx` เปลี่ยนรหัสผ่าน
+- `src/pages/Dashboard.tsx` หน้าหลัก + โหลดร้าน/เช็คการเชื่อมต่อ LINE OA
+- `src/pages/Broadcast.tsx` ส่งข้อความ + AI variants + ตรวจสถานะ LINE OA
+- `src/pages/Analytics.tsx` placeholder สำหรับ analytics จริงจาก backend
+- `src/pages/Customers.tsx` placeholder สำหรับรายชื่อลูกค้า
+- `src/pages/Inbox.tsx` Inbox/Chat ดึงจาก API
+- `src/pages/ABTest.tsx` UI A/B Test (mock data)
+- `src/pages/Settings.tsx` เลือกแพ็คเกจ + ลิงก์หน้า Store Integration
+- `src/pages/settings/StoreIntegration.tsx` ฟอร์มเชื่อม LINE OA ต่อ store แบบใหม่
+- `src/pages/LineCallback.tsx` callback จาก LINE OAuth และเซ็ต lineOA state
+- `src/pages/KnowledgeView.tsx` อ่าน knowledge ของร้าน
+- `src/pages/KnowledgeEditor.tsx` CRUD knowledge ผ่าน `useKnowledgeEditor`
+- `src/pages/Website.tsx` แสดงสถานะเว็บไซต์ + analytics จาก backend
+- `src/pages/StoreSettings.tsx` ฟอร์มเชื่อมต่อ LINE OA แบบเดิม
+- `src/pages/LineSetup.tsx` เชื่อม LINE OA แบบ token-based (legacy)
+- `src/pages/ConnectBridge.tsx` คู่มือฝัง script เพื่อติดตาม event
+- `src/pages/PublicSite.tsx` หน้า public site สำหรับ store slug + tracker
+- `src/pages/WebBuilder.tsx` placeholder เว็บออโต้สำหรับร้าน
+- `src/pages/KnowledgeAIGenerator.tsx` เรียก AI สร้าง knowledge
 
-## โครงสร้างโปรเจค
+**Public Assets**
+- `public/image/logo_mia.jpg` โลโก้ที่ใช้เป็น watermark ในบางหน้า
 
-```
-src/
-├── components/
-│   ├── layout/          # Layout components (Sidebar, TopNav, MobileNav)
-│   └── ui/              # shadcn/ui components
-├── pages/               # Page components
-│   ├── Login.tsx
-│   ├── Dashboard.tsx
-│   ├── LineSetup.tsx
-│   ├── Broadcast.tsx
-│   ├── Analytics.tsx
-│   ├── Customers.tsx
-│   ├── Settings.tsx
-│   └── ABTest.tsx
-├── store/
-│   └── useStore.ts      # Zustand store
-├── lib/
-│   ├── utils.ts         # Utility functions
-│   └── mockData.ts      # Mock data for demo
-└── App.tsx              # Main app with routing
-```
+**Scripts (จาก `package.json`)**
+- `npm run dev` เริ่ม Vite dev server
+- `npm run build` typecheck + build
+- `npm run preview` preview build
+- `npm run lint` ESLint
+- `npm run typecheck` TypeScript typecheck
 
-## Available Scripts
-
-### Development
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-npm run typecheck    # TypeScript type checking
-```
-
-## การใช้งาน
-
-### 1. เข้าสู่ระบบ
-- ใช้ demo account หรือสร้างบัญชีใหม่
-
-### 2. เชื่อมต่อ Line OA
-- ไปที่หน้า "ตั้งค่า Line OA"
-- ทำตามขั้นตอน 4 ขั้นตอน
-- สแกน QR Code (mock) และกรอกข้อมูล
-
-### 3. ส่งข้อความ
-- ไปที่หน้า "ส่งข้อความ"
-- เขียนข้อความหรือใช้ AI Generator
-- เลือกผู้รับและส่ง
-
-### 4. ดูรายงาน
-- ไปที่หน้า "รายงานสถิติ"
-- ดู Charts และ Analytics แบบ Real-time
-
-### 5. จัดการลูกค้า
-- ไปที่หน้า "ลูกค้า"
-- ค้นหา กรอง และแบ่งกลุ่มลูกค้า
-
-### 6. A/B Testing
-- ไปที่หน้า "A/B Testing"
-- สร้างการทดสอบข้อความ 2 แบบ
-- ดูผลลัพธ์และเลือกแบบที่ดีที่สุด
-
-## Features โดยละเอียด
-
-### Dashboard
-- สถิติหลัก 4 ตัว (ผู้ติดตาม, ข้อความส่ง, อัตราคลิก, รายได้)
-- ข้อมูล Line OA ที่เชื่อมต่อ
-- แพ็คเกจปัจจุบัน
-- Quick Actions
-
-### Line OA Setup
-- Wizard 4 ขั้นตอน
-- QR Code scanning (mock)
-- กรอกข้อมูลบัญชี
-- Validation และ Success state
-
-### Broadcast
-- Editor ข้อความ
-- AI Generator (3 variants)
-- สถิติผู้รับ
-- การใช้งานเหลือ
-- Tips & Tricks
-
-### Analytics
-- 4 KPI Cards
-- Line Chart: การเติบโตของผู้ติดตาม
-- Bar Chart: ข้อความแยกตามประเภท
-- Line Chart: Engagement ตามวัน
-- 3 Additional Metrics
-
-### Customers
-- Data Table พร้อม sorting/filtering
-- Search functionality
-- Segment badges (VIP, Regular, New)
-- Status indicators
-- Export function (mock)
-
-### Settings
-- แสดงแพ็คเกจปัจจุบัน
-- Pricing Cards ทั้งหมด
-- Upgrade/Downgrade
-- ข้อมูลบัญชี
-- ประวัติการชำระเงิน
-
-### A/B Testing
-- สร้าง test ใหม่
-- เปรียบเทียบ 2 variants
-- แสดงผลลัพธ์แบบ Real-time
-- Winner indication
-- Multiple test states (draft, running, completed)
-
-## Mobile Responsive
-
-- Mobile-first design
-- Collapsible sidebar on mobile
-- Bottom navigation bar (4 main pages)
-- Touch-friendly buttons
-- Optimized charts for small screens
-- Responsive tables with hidden columns
-
-## Dark Mode
-
-- Toggle ใน TopNav
-- Persisted ใน localStorage
-- Smooth transition
-- Support ทุก component
-
-## Customization
-
-### เปลี่ยนสี
-แก้ไขใน `tailwind.config.js`:
-```js
-colors: {
-  line: {
-    DEFAULT: '#00B900',  // Line green
-    dark: '#009900',
-  },
-}
-```
-
-### เปลี่ยน Font
-แก้ไขใน `tailwind.config.js`:
-```js
-fontFamily: {
-  sans: ['Prompt', 'Sarabun', 'system-ui', 'sans-serif'],
-}
-```
-
-### เปลี่ยน Theme Colors
-แก้ไขใน `src/index.css`:
-```css
-:root {
-  --background: ...;
-  --primary: ...;
-  ...
-}
-```
-
-## Production Deployment
-
-### Build
-```bash
-npm run build
-```
-
-Output จะอยู่ใน `dist/` folder
-
-### Deploy
-Deploy `dist/` folder ไปยัง:
-- Vercel
-- Netlify
-- AWS S3 + CloudFront
-- หรือ Static hosting ใดๆ
-
-## Future Enhancements
-
-- [ ] Connect to real Line Messaging API
-- [ ] Backend API with authentication
-- [ ] Database integration (Supabase recommended)
-- [ ] Real AI message generation
-- [ ] Payment integration (Stripe/Omise)
-- [ ] Email notifications
-- [ ] Advanced analytics
-- [ ] Export reports (PDF, Excel)
-- [ ] Multi-language support
-- [ ] Team collaboration features
-
-## Support
-
-สำหรับคำถามและการสนับสนุน:
-- Email: support@lineboost.com (mock)
-- Line: @lineboost (mock)
-
-## License
-
-Copyright © 2025 LineBoost SME. All rights reserved.
-
----
-
-Built with ❤️ for Thai SMEs
+ถ้าต้องการให้ปรับ README เพิ่มส่วน diagram หรืออธิบาย flow แบบละเอียดกว่านี้ บอกได้เลย.

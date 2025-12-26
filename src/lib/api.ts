@@ -1,6 +1,4 @@
 // src/lib/api.ts
-// SaaS-ready API utilities for ConnectBridge / LineBoost
-
 import { auth } from "./firebase";
 
 /**
@@ -119,8 +117,29 @@ export type LineStatusResponse = {
   };
 };
 
-export async function getLineStatus(): Promise<LineStatusResponse> {
-  return authedJson("/line/status");
+export async function getLineStatus(storeId?: string): Promise<LineStatusResponse> {
+  const query = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
+  return authedJson(`/line/status${query}`);
+}
+
+/**
+ * ✅ NEW: status แบบผูก storeId จริง (ใช้กับหน้า Broadcast/อื่นๆ ที่ต้องเช็คต่อร้าน)
+ * ใช้ endpoint ที่มีอยู่แล้ว: GET /api/stores/:storeId/line-credentials
+ * เรา map ออกมาให้เหมือน LineStatusResponse เพื่อให้ UI ใช้งานง่าย
+ */
+export async function getLineStatusByStore(storeId: string): Promise<LineStatusResponse> {
+  const res: any = await authedJson(`/stores/${storeId}/line-credentials`);
+  const d = res?.data ?? res;
+
+  return {
+    success: true,
+    message: "ok",
+    data: {
+      connected: !!d?.channelAccessToken,
+      displayName: d?.displayName,
+      lineUserId: d?.lineUserId,
+    },
+  };
 }
 
 // --------------------------------------------------

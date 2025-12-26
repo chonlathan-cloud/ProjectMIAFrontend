@@ -1,16 +1,31 @@
 // src/pages/settings/StoreIntegration.tsx
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useStore } from "@/store/useStore";
-import { getLineCredentials, listStores, saveLineCredentials } from "@/lib/api";
+import {
+  getLineCredentials,
+  listStores,
+  saveLineCredentials,
+} from "@/lib/api";
 
 export default function StoreIntegration() {
-  const { user, store, setStore } = useStore();
+  const {
+    user,
+    store,
+    setStore,
+    authReady,
+  } = useStore();
 
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
@@ -26,19 +41,18 @@ export default function StoreIntegration() {
   const [connected, setConnected] = useState(false);
 
   // --------------------------------------------------------------
-  // STEP 1 — โหลด stores ของ user (backend auto-create store ให้แล้ว)
+  // STEP 1 — โหลด stores (รอ authReady ก่อน)
   // --------------------------------------------------------------
   useEffect(() => {
-    async function init() {
-      if (!user) return;
+    if (!authReady || !user) return; // ✅ guard สำคัญที่สุด
 
+    async function init() {
       try {
         const res = await listStores();
         const list = res?.data?.stores || [];
 
         setStores(list);
 
-        // set store แรกเป็น default
         if (list.length > 0) {
           const s = list[0];
           setStore(s);
@@ -56,18 +70,15 @@ export default function StoreIntegration() {
     }
 
     init();
-  }, [user, setStore]);
+  }, [authReady, user, setStore]);
 
   // --------------------------------------------------------------
-  // STEP 2 — โหลด credential เดิมจาก backend
+  // STEP 2 — โหลด credential เดิม
   // --------------------------------------------------------------
   async function loadCredentials(storeId: string) {
     try {
       const res = await getLineCredentials(storeId);
-
-      const settings = res?.settings || {};
-
-      const line = settings || {};
+      const line = res?.settings || {};
 
       setConnected(!!line.channelAccessToken);
       setChannelAccessToken(line.channelAccessToken || "");
@@ -81,7 +92,7 @@ export default function StoreIntegration() {
   }
 
   // --------------------------------------------------------------
-  // STEP 3 — บันทึก Token (create/update ตาม flow)
+  // STEP 3 — บันทึก Token
   // --------------------------------------------------------------
   async function handleSave() {
     if (!selectedStoreId) {
@@ -94,7 +105,6 @@ export default function StoreIntegration() {
     }
 
     setLoading(true);
-
     try {
       const res = await saveLineCredentials(selectedStoreId, {
         channelAccessToken,
@@ -106,8 +116,6 @@ export default function StoreIntegration() {
       if (res?.success === false) throw new Error(res.message);
 
       setConnected(true);
-
-      // sync Zustand store
       setStore({
         ...store,
         id: selectedStoreId,
@@ -122,7 +130,9 @@ export default function StoreIntegration() {
     }
   }
 
-  if (initializing) return <p className="p-4">กำลังโหลดข้อมูลร้าน...</p>;
+  if (initializing) {
+    return <p className="p-4">กำลังโหลดข้อมูลร้าน...</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -131,11 +141,12 @@ export default function StoreIntegration() {
       <Card>
         <CardHeader>
           <CardTitle>LINE Messaging API</CardTitle>
-          <CardDescription>ผูกบัญชี LINE OA เพื่อให้ระบบทำงานครบวงจร</CardDescription>
+          <CardDescription>
+            ผูกบัญชี LINE OA เพื่อให้ระบบทำงานครบวงจร
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-
           <div>
             <label className="text-sm text-gray-600">เลือกร้าน</label>
             <select
@@ -170,7 +181,7 @@ export default function StoreIntegration() {
           </div>
 
           <div>
-            <label className="text-sm">Channel Secret (optional)</label>
+            <label className="text-sm">Channel Secret</label>
             <Input
               value={channelSecret}
               onChange={(e) => setChannelSecret(e.target.value)}
@@ -178,7 +189,7 @@ export default function StoreIntegration() {
           </div>
 
           <div>
-            <label className="text-sm">LINE OA ID (เช่น channelId)</label>
+            <label className="text-sm">LINE OA ID</label>
             <Input
               value={lineUserId}
               onChange={(e) => setLineUserId(e.target.value)}
@@ -193,7 +204,11 @@ export default function StoreIntegration() {
             />
           </div>
 
-          <Button onClick={handleSave} disabled={loading} className="w-full bg-black text-white">
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+            className="w-full bg-black text-white"
+          >
             {loading ? "กำลังบันทึก..." : "บันทึกการเชื่อมต่อ"}
           </Button>
         </CardContent>

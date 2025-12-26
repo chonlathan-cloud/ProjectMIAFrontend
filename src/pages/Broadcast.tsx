@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import {
   getLineStatus,
   generateBroadcastAi,
   sendBroadcastMcp,
+  uploadLineImage,
   type LineStatusResponse,
   type BroadcastAiLayout,
 } from '@/lib/api';
@@ -21,9 +22,13 @@ export function Broadcast() {
   const [aiDrafts, setAiDrafts] = useState<BroadcastAiLayout[]>([]);
   const [selectedDraft, setSelectedDraft] = useState<BroadcastAiLayout | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const maxImageBytes = 1024 * 1024;
 
   const { user, store } = useStore();
   const navigate = useNavigate();
@@ -86,7 +91,9 @@ export function Broadcast() {
         throw new Error('ไม่พบผลลัพธ์จาก AI');
       }
       setAiDrafts(variants);
-      setSelectedDraft(variants[0] || null);
+      const preferred = variants.find((variant: BroadcastAiLayout) => variant.type === 'card');
+      setSelectedDraft(preferred || variants[0] || null);
+      setUploadedImageUrl(null);
       toast.success('สร้างข้อความด้วย AI สำเร็จ!');
     } catch (err: any) {
       toast.error(err?.message || 'สร้างข้อความด้วย AI ไม่สำเร็จ');
@@ -116,6 +123,7 @@ export function Broadcast() {
       setMessage('');
       setAiDrafts([]);
       setSelectedDraft(null);
+      setUploadedImageUrl(null);
     } catch (err: any) {
       toast.error(err?.message || 'ส่ง Broadcast ไม่สำเร็จ');
     } finally {
@@ -147,6 +155,7 @@ export function Broadcast() {
           card: {
             ...selectedDraft.card,
             altText: selectedDraft.altText,
+            imageUrl: uploadedImageUrl || selectedDraft.card.imageUrl,
           },
         });
       } else {
@@ -162,6 +171,7 @@ export function Broadcast() {
       toast.success('ส่ง Broadcast ด้วย AI สำเร็จ');
       setAiDrafts([]);
       setSelectedDraft(null);
+      setUploadedImageUrl(null);
       setMessage('');
     } catch (err: any) {
       toast.error(err?.message || 'ส่ง Broadcast ไม่สำเร็จ');
@@ -311,9 +321,9 @@ export function Broadcast() {
 
                   {selectedDraft?.type === 'card' ? (
                     <div className="border rounded-xl p-4 bg-white dark:bg-gray-900 space-y-3">
-                      {selectedDraft.card.imageUrl && (
+                      {(uploadedImageUrl || selectedDraft.card.imageUrl) && (
                         <img
-                          src={selectedDraft.card.imageUrl}
+                          src={uploadedImageUrl || selectedDraft.card.imageUrl}
                           alt="card preview"
                           className="w-full h-44 object-cover rounded-lg"
                         />
@@ -344,11 +354,90 @@ export function Broadcast() {
                     </div>
                   ) : null}
 
+                  {selectedDraft?.type === 'card' && (
+                    <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                        แนบรูปสำหรับ Card (จะอัปโหลดและแทนที่ imageUrl)
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file || !store?.id) return;
+                          if (file.size > maxImageBytes) {
+                            toast.error('ไฟล์ใหญ่เกิน 1MB กรุณาลดขนาดก่อนอัปโหลด');
+                            return;
+                          }
+
+                          try {
+                            setUploadingImage(true);
+                            const reader = new FileReader();
+                            const dataBase64 = await new Promise<string>((resolve, reject) => {
+                              reader.onload = () => {
+                                const result = reader.result;
+                                if (typeof result !== 'string') {
+                                  reject(new Error('Invalid file'));
+                                  return;
+                                }
+                                const base64 = result.split(',')[1] || '';
+                                resolve(base64);
+                              };
+                              reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                              reader.readAsDataURL(file);
+                            });
+
+                            const res: any = await uploadLineImage({
+                              storeId: store.id,
+                              fileName: file.name,
+                              contentType: file.type || 'image/png',
+                              dataBase64,
+                            });
+                            const url = res?.data?.url;
+                            if (!url) throw new Error('ไม่พบ URL รูป');
+                            setUploadedImageUrl(url);
+                            toast.success('อัปโหลดรูปสำเร็จ');
+                          } catch (err: any) {
+                            toast.error(err?.message || 'อัปโหลดรูปไม่สำเร็จ');
+                          } finally {
+                            setUploadingImage(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                      >
+                        {uploadingImage ? 'กำลังอัปโหลด...' : 'แนบรูปจากเครื่อง'}
+                      </Button>
+                      {uploadingImage && (
+                        <p className="text-xs text-gray-500 mt-2">กำลังอัปโหลด...</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">ไฟล์ไม่เกิน 1MB</p>
+                      {uploadedImageUrl && (
+                        <p className="text-xs text-emerald-600 break-all mt-2">อัปโหลดแล้ว: {uploadedImageUrl}</p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button onClick={handleSendAi} className="flex-1" disabled={sending || !selectedDraft}>
                       {sending ? 'กำลังส่ง...' : 'ส่งด้วย AI'}
                     </Button>
-                    <Button variant="outline" onClick={() => { setAiDrafts([]); setSelectedDraft(null); }} className="flex-1">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAiDrafts([]);
+                        setSelectedDraft(null);
+                        setUploadedImageUrl(null);
+                      }}
+                      className="flex-1"
+                    >
                       ยกเลิก
                     </Button>
                   </div>

@@ -268,3 +268,15 @@ export async function sendBroadcastMcp(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function uploadLineImage(payload: {
+  storeId: string;
+  fileName: string;
+  contentType: string;
+  dataBase64: string;
+}) {
+  return authedJson("/mcp/line/upload-image", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

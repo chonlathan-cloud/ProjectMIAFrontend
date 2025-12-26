@@ -217,3 +217,54 @@ export async function sendBroadcast(payload: {
     }),
   });
 }
+
+export type BroadcastCardPayload = {
+  title: string;
+  body: string;
+  imageUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+};
+
+export type BroadcastFlexPayload = {
+  contents: Record<string, unknown>;
+};
+
+export type BroadcastAiLayout =
+  | {
+      type: "text";
+      text: string;
+    }
+  | {
+      type: "card";
+      altText: string;
+      card: BroadcastCardPayload;
+    }
+  | {
+      type: "flex";
+      altText: string;
+      flex: BroadcastFlexPayload;
+    };
+
+export async function generateBroadcastAi(payload: {
+  storeId: string;
+  content: string;
+}) {
+  return authedJson("/mcp/line/broadcast/ai", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendBroadcastMcp(payload: {
+  storeId: string;
+  type: "text" | "card" | "flex";
+  text?: string;
+  card?: BroadcastCardPayload & { altText?: string };
+  flex?: BroadcastFlexPayload & { altText?: string };
+}) {
+  return authedJson("/mcp/line/broadcast/send", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

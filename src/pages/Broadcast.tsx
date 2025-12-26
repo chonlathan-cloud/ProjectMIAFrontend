@@ -1,19 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Send, Sparkles, Check } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { sendBroadcast, getLineStatus, type LineStatusResponse } from '@/lib/api';
+import {
+  sendBroadcast,
+  getLineStatus,
+  generateBroadcastAi,
+  sendBroadcastMcp,
+  type LineStatusResponse,
+  type BroadcastAiLayout,
+} from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 
 export function Broadcast() {
   const [message, setMessage] = useState('');
-  const [showAIVariants, setShowAIVariants] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
-  const [aiVariants, setAiVariants] = useState<string[]>([]);
+  const [aiDrafts, setAiDrafts] = useState<BroadcastAiLayout[]>([]);
+  const [selectedDraft, setSelectedDraft] = useState<BroadcastAiLayout | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -55,7 +62,7 @@ export function Broadcast() {
     }
   };
 
-  const handleGenerateAI = () => {
+  const handleGenerateAI = async () => {
     if (!message.trim()) return toast.error('กรุณากรอกข้อความก่อน');
 
     if (user?.tier === 'starter') {
@@ -63,19 +70,29 @@ export function Broadcast() {
       return;
     }
 
-    setShowAIVariants(true);
-    const base = message.trim();
-    setAiVariants([
-      `บอกข่าวโปรโมชั่น: ${base}\nจบด้วยลิงก์สั่งซื้อ`,
-      `ย้ำความเร่งด่วน: ${base}\nใส่โค้ดส่วนลดและเวลาหมดอายุ`,
-      `ชวนกลับมาซื้อซ้ำ: ${base}\nแถมสิทธิ์พิเศษสำหรับลูกค้าเก่า`,
-    ]);
-    toast.success('สร้างข้อความด้วย AI สำเร็จ!');
-  };
+    if (!store?.id) {
+      toast.error('ไม่พบร้านที่ใช้งานอยู่');
+      return;
+    }
 
-  const handleSelectVariant = (content: string) => {
-    setMessage(content);
-    setSelectedVariant(content);
+    try {
+      setAiLoading(true);
+      const res: any = await generateBroadcastAi({
+        storeId: store.id,
+        content: message.trim(),
+      });
+      const variants = res?.data?.variants;
+      if (!variants || !Array.isArray(variants) || variants.length === 0) {
+        throw new Error('ไม่พบผลลัพธ์จาก AI');
+      }
+      setAiDrafts(variants);
+      setSelectedDraft(variants[0] || null);
+      toast.success('สร้างข้อความด้วย AI สำเร็จ!');
+    } catch (err: any) {
+      toast.error(err?.message || 'สร้างข้อความด้วย AI ไม่สำเร็จ');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleSend = async () => {
@@ -97,9 +114,55 @@ export function Broadcast() {
       await sendBroadcast({ content: message, sendNow: true, storeId: store.id });
       toast.success('ส่ง Broadcast สำเร็จ');
       setMessage('');
-      setShowAIVariants(false);
-      setSelectedVariant(null);
-      setAiVariants([]);
+      setAiDrafts([]);
+      setSelectedDraft(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'ส่ง Broadcast ไม่สำเร็จ');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendAi = async () => {
+    if (!selectedDraft || !store?.id) return;
+
+    if (!lineStatus?.connected) {
+      toast.error('กรุณาเชื่อมต่อ LINE OA ก่อนส่ง');
+      navigate('/settings/store');
+      return;
+    }
+
+    try {
+      setSending(true);
+      if (selectedDraft.type === 'text') {
+        await sendBroadcastMcp({
+          storeId: store.id,
+          type: 'text',
+          text: selectedDraft.text,
+        });
+      } else if (selectedDraft.type === 'card') {
+        await sendBroadcastMcp({
+          storeId: store.id,
+          type: 'card',
+          card: {
+            ...selectedDraft.card,
+            altText: selectedDraft.altText,
+          },
+        });
+      } else {
+        await sendBroadcastMcp({
+          storeId: store.id,
+          type: 'flex',
+          flex: {
+            altText: selectedDraft.altText,
+            contents: selectedDraft.flex.contents,
+          },
+        });
+      }
+      toast.success('ส่ง Broadcast ด้วย AI สำเร็จ');
+      setAiDrafts([]);
+      setSelectedDraft(null);
+      setMessage('');
     } catch (err: any) {
       toast.error(err?.message || 'ส่ง Broadcast ไม่สำเร็จ');
     } finally {
@@ -124,9 +187,9 @@ export function Broadcast() {
                   สร้างแบรอดแคสต์ที่ดูมืออาชีพ เลือกใช้ AI เพื่อเร่งการเขียน และส่งได้ทันที
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button size="lg" onClick={() => setShowAIVariants(true)}>
+                  <Button size="lg" onClick={handleGenerateAI} disabled={aiLoading}>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    ให้ AI ช่วยร่างข้อความ
+                    {aiLoading ? 'กำลังสร้าง...' : 'ให้ AI ช่วยร่างข้อความ'}
                   </Button>
                   <Button variant="outline" size="lg" className="text-base" onClick={handleSend} disabled={!canSend}>
                     ส่งทันที
@@ -179,9 +242,14 @@ export function Broadcast() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button variant="outline" onClick={handleGenerateAI} className="flex-1" disabled={user?.tier === 'starter'}>
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerateAI}
+                    className="flex-1"
+                    disabled={user?.tier === 'starter' || aiLoading}
+                  >
                     <Sparkles className="w-5 h-5 mr-2" />
-                    สร้างด้วย AI
+                    {aiLoading ? 'กำลังสร้าง...' : 'สร้างด้วย AI'}
                   </Button>
                   <Button onClick={handleSend} className="flex-1" disabled={!canSend}>
                     <Send className="w-5 h-5 mr-2" />
@@ -197,31 +265,93 @@ export function Broadcast() {
               </CardContent>
             </Card>
 
-            {showAIVariants && (
+            {aiDrafts.length > 0 && (
               <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-2xl">ข้อความที่ AI สร้าง</CardTitle>
-                  <CardDescription className="text-lg">เลือกข้อความที่ต้องการใช้</CardDescription>
+                  <CardTitle className="text-2xl">ตัวอย่างข้อความจาก AI</CardTitle>
+                  <CardDescription className="text-lg">
+                    เลือก 1 แบบเพื่อส่ง (ข้อความ, Card, Flex)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {aiVariants.map((variant, index) => (
-                    <div
-                      key={`${index}-${variant}`}
-                      className={`relative p-4 rounded-xl cursor-pointer transition-all border ${
-                        selectedVariant === variant
-                          ? 'border-[#008080] bg-[#008080]/5 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-[#008080]/50'
-                      }`}
-                      onClick={() => handleSelectVariant(variant)}
-                    >
-                      {selectedVariant === variant && (
-                        <div className="absolute top-2 right-2 w-7 h-7 bg-gradient-to-r from-[#008080] to-[#00a0a0] rounded-full flex items-center justify-center shadow">
-                          <Check className="w-4 h-4 text-white" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {aiDrafts.map((variant, index) => (
+                      <button
+                        key={`${variant.type}-${index}`}
+                        type="button"
+                        onClick={() => setSelectedDraft(variant)}
+                        className={`rounded-xl border px-3 py-2 text-left transition ${
+                          selectedDraft === variant
+                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                          {variant.type}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {variant.type === 'text'
+                            ? 'ข้อความธรรมดา'
+                            : variant.type === 'card'
+                            ? 'Card Message'
+                            : 'Flex Message'}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedDraft?.type === 'text' && (
+                    <div className="border rounded-xl p-4 bg-white dark:bg-gray-900">
+                      <p className="text-sm text-gray-500 mb-2">ข้อความ</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                        {selectedDraft.text}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedDraft?.type === 'card' ? (
+                    <div className="border rounded-xl p-4 bg-white dark:bg-gray-900 space-y-3">
+                      {selectedDraft.card.imageUrl && (
+                        <img
+                          src={selectedDraft.card.imageUrl}
+                          alt="card preview"
+                          className="w-full h-44 object-cover rounded-lg"
+                        />
+                      )}
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold">{selectedDraft.card.title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                          {selectedDraft.card.body}
+                        </p>
+                      </div>
+                      {selectedDraft.card.ctaLabel && (
+                        <div className="inline-flex items-center gap-2 text-sm text-emerald-600">
+                          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30">
+                            {selectedDraft.card.ctaLabel}
+                          </span>
+                          {selectedDraft.card.ctaUrl && (
+                            <span className="text-xs text-gray-400 truncate">{selectedDraft.card.ctaUrl}</span>
+                          )}
                         </div>
                       )}
-                      <p className="text-base whitespace-pre-wrap text-gray-700 dark:text-gray-300">{variant}</p>
                     </div>
-                  ))}
+                  ) : selectedDraft?.type === 'flex' ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-4 bg-slate-50 dark:bg-slate-900/60">
+                      <p className="text-sm text-gray-500 mb-2">Flex payload (JSON)</p>
+                      <pre className="text-xs whitespace-pre-wrap break-all text-gray-700 dark:text-gray-300">
+                        {JSON.stringify(selectedDraft.flex.contents, null, 2)}
+                      </pre>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button onClick={handleSendAi} className="flex-1" disabled={sending || !selectedDraft}>
+                      {sending ? 'กำลังส่ง...' : 'ส่งด้วย AI'}
+                    </Button>
+                    <Button variant="outline" onClick={() => { setAiDrafts([]); setSelectedDraft(null); }} className="flex-1">
+                      ยกเลิก
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}

@@ -26,6 +26,9 @@ import StoreIntegration from '@/pages/settings/StoreIntegration';
 import { SignUp } from '@/pages/SignUp';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { ResetPassword } from '@/pages/ResetPassword';
+import LiffBridge from '@/pages/LiffBridge';
+import PublicSite from '@/pages/PublicSite';
+import PdpaConsent from '@/pages/PdpaConsent';
 
 import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -62,7 +65,7 @@ function KnowledgeEditorRoute() {
 ----------------------------- */
 
 function App() {
-  const { setUser, logout } = useStore();
+  const { setUser, logout, setAuthReady } = useStore();
 
   /* force light theme */
   useEffect(() => {
@@ -74,25 +77,29 @@ function App() {
   /* Firebase Auth listener */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        setUser({
-          id: fbUser.uid,
-          name: fbUser.displayName || fbUser.email || 'LineBoost User',
-          email: fbUser.email || '',
-          tier: 'growth',
-          avatar: fbUser.photoURL || undefined,
-        });
+      try {
+        if (fbUser) {
+          setUser({
+            id: fbUser.uid,
+            name: fbUser.displayName || fbUser.email || 'LineBoost User',
+            email: fbUser.email || '',
+            tier: 'growth',
+            avatar: fbUser.photoURL || undefined,
+          });
 
-        const token = await fbUser.getIdToken();
-        localStorage.setItem('firebase_token', token);
-      } else {
-        localStorage.removeItem('firebase_token');
-        logout();
+          const token = await fbUser.getIdToken();
+          localStorage.setItem('firebase_token', token);
+        } else {
+          localStorage.removeItem('firebase_token');
+          logout();
+        }
+      } finally {
+        setAuthReady(true);
       }
     });
 
     return () => unsub();
-  }, [setUser, logout]);
+  }, [setUser, logout, setAuthReady]);
 
   return (
     <Router>
@@ -102,6 +109,9 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/liff-bridge" element={<LiffBridge />} />
+        <Route path="/public/:storeSlug" element={<PublicSite />} />
+        <Route path="/pdpa/:storeId" element={<PdpaConsent />} />
 
         {/* ---------- Protected ---------- */}
         <Route

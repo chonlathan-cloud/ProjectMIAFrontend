@@ -32,7 +32,7 @@ import {
 } from "./chunk-DEPKGBUF.js";
 import {
   __rest
-} from "./chunk-JMGR4S6A.js";
+} from "./chunk-UDNUQ7WZ.js";
 import "./chunk-5WRI5ZAA.js";
 
 // node_modules/firebase/node_modules/@firebase/auth/dist/esm2017/index-35c79a8a.js

@@ -15,6 +15,10 @@ File Path: /Users/tadapongsrilasak/clone/LineBoost/README.md
 - `VITE_STORE_ID` ใช้ใน `src/pages/Website.tsx`
 - `VITE_BUILDER_URL` ใช้ใน `src/pages/Website.tsx`
 
+**Backend Base URL**
+- Dev (ยังไม่ deploy): `http://localhost:3000`
+- Prod (deploy แล้ว): `https://backend-lineboost.web.app`
+
 **App Flow (ไฟล์สัมพันธ์กันอย่างไร)**
 - `src/main.tsx` สร้าง React root แล้ว render `src/App.tsx`
 - `src/App.tsx` กำหนด routing ทั้งหมด + auth listener (Firebase) + Guard

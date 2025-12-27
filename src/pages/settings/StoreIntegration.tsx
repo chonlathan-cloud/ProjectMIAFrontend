@@ -1,6 +1,7 @@
 // src/pages/settings/StoreIntegration.tsx
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -16,6 +17,7 @@ import { useStore } from "@/store/useStore";
 import {
   getLineCredentials,
   listStores,
+  createStore,
   saveLineCredentials,
 } from "@/lib/api";
 
@@ -26,12 +28,15 @@ export default function StoreIntegration() {
     setStore,
     authReady,
   } = useStore();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
   const [stores, setStores] = useState<any[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState("");
+  const [newStoreName, setNewStoreName] = useState("");
+  const [creatingStore, setCreatingStore] = useState(false);
 
   const [channelAccessToken, setChannelAccessToken] = useState("");
   const [channelSecret, setChannelSecret] = useState("");
@@ -123,6 +128,7 @@ export default function StoreIntegration() {
       });
 
       toast.success("บันทึกโทเคน LINE สำเร็จ");
+      navigate("/broadcast");
     } catch (err: any) {
       toast.error(err?.message || "บันทึกไม่สำเร็จ");
     } finally {
@@ -130,8 +136,61 @@ export default function StoreIntegration() {
     }
   }
 
+  async function handleCreateStore() {
+    if (!newStoreName.trim()) {
+      toast.error("กรุณากรอกชื่อร้าน");
+      return;
+    }
+
+    setCreatingStore(true);
+    try {
+      const res: any = await createStore(newStoreName.trim());
+      const created = res?.data?.store || res?.store;
+      if (!created?.id) throw new Error("สร้างร้านไม่สำเร็จ");
+
+      const nextStores = [created, ...stores];
+      setStores(nextStores);
+      setStore(created);
+      setSelectedStoreId(created.id);
+      setNewStoreName("");
+      await loadCredentials(created.id);
+      toast.success("สร้างร้านสำเร็จ");
+    } catch (err: any) {
+      toast.error(err?.message || "สร้างร้านไม่สำเร็จ");
+    } finally {
+      setCreatingStore(false);
+    }
+  }
+
   if (initializing) {
     return <p className="p-4">กำลังโหลดข้อมูลร้าน...</p>;
+  }
+
+  if (stores.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">การเชื่อมต่อ LINE OA</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>สร้างร้านแรกของคุณ</CardTitle>
+            <CardDescription>ยังไม่มีร้านในระบบ กรุณาสร้างก่อน</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm">ชื่อร้าน</label>
+              <Input
+                value={newStoreName}
+                onChange={(e) => setNewStoreName(e.target.value)}
+                placeholder="เช่น LineBoost Cafe"
+              />
+            </div>
+            <Button onClick={handleCreateStore} disabled={creatingStore} className="w-full bg-black text-white">
+              {creatingStore ? "กำลังสร้าง..." : "สร้างร้าน"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

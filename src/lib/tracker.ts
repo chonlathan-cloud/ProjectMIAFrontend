@@ -1,6 +1,13 @@
 // Utility สำหรับยิง Event ไปหลังบ้าน
 
-const API_BASE_URL = 'http://localhost:3000/api'; // แก้เป็น URL ของ Backend จริง
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+const resolveTrackEndpoint = () => {
+  const base = (API_BASE_URL || '').replace(/\/+$/, '');
+  if (!base) return '/api/sites/event';
+  if (base.endsWith('/api')) return `${base}/sites/event`;
+  return `${base}/api/sites/event`;
+};
 
 export const getSessionId = () => {
   let sessionId = localStorage.getItem("cb_session_id");
@@ -11,7 +18,7 @@ export const getSessionId = () => {
   return sessionId;
 };
 
-export const trackEvent = async (storeId: string, eventType: string, metadata: any = {}) => {
+export const trackEvent = async (storeId: string, eventType: string, meta: any = {}) => {
   const sessionId = getSessionId();
   const lineUserId = localStorage.getItem("cb_line_user_id"); // จะมีค่าเมื่อ Login แล้ว
 
@@ -20,14 +27,18 @@ export const trackEvent = async (storeId: string, eventType: string, metadata: a
     sessionId,
     lineUserId,
     eventType,
-    path: window.location.pathname,
-    metadata
+    eventName: eventType,
+    url: window.location.href,
+    page: window.location.pathname,
+    meta,
+    ts: new Date().toISOString(),
   };
 
   try {
-    // ใช้ navigator.sendBeacon ถ้าทำได้ (ส่งข้อมูลแม้ปิดหน้าเว็บ) 
+    const endpoint = resolveTrackEndpoint();
+    // ใช้ navigator.sendBeacon ถ้าทำได้ (ส่งข้อมูลแม้ปิดหน้าเว็บ)
     // แต่เพื่อความชัวร์ใน MVP ใช้ fetch ธรรมดาก่อน
-    await fetch(`${API_BASE_URL}/track`, {
+    await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

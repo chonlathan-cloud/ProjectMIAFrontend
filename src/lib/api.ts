@@ -153,8 +153,9 @@ export async function getInboxCustomers(storeId: string) {
   return authedJson(`/inbox/customers?storeId=${storeId}`);
 }
 
-export async function getInboxHistory(customerId: string) {
-  return authedJson(`/inbox/history/${customerId}`);
+export async function getInboxHistory(customerId: string, storeId: string) {
+  const query = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
+  return authedJson(`/inbox/history/${customerId}${query}`);
 }
 
 export async function sendInboxMessage(customerId: string, message: string) {
@@ -186,6 +187,10 @@ export async function getLineCredentials(storeId: string) {
   return authedJson(`/stores/${storeId}/line-credentials`);
 }
 
+export async function getLineOaLink(storeId: string) {
+  return authedJson(`/stores/${storeId}/line-oa-link`);
+}
+
 export async function saveLineCredentials(
   storeId: string,
   payload: {
@@ -193,6 +198,7 @@ export async function saveLineCredentials(
     channelSecret?: string;
     lineUserId?: string;
     displayName?: string;
+    basicId?: string;
   }
 ) {
   return authedJson(`/stores/${storeId}/line-credentials`, {

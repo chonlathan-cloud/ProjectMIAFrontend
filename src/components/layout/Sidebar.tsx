@@ -16,6 +16,8 @@ const navItems = [
   { path: '/broadcast', icon: Send, label: 'ส่งข้อความ' },
   { path: '/analytics', icon: BarChart3, label: 'รายงานสถิติ' },
   { path: "/website", icon: Globe, label: "Website" },
+  { path: "/web-builder", icon: Globe, label: "Web Builder" },
+  { path: "/ai-trainer", icon: MessageSquare, label: "AI Trainer" },
   { path: '/customers', icon: Users, label: 'ลูกค้า' },
   { path: '/inbox', icon: MessageSquare, label: 'กล่องข้อความ' },
   { path: '/ab-test', icon: TestTube2, label: 'A/B Testing' },

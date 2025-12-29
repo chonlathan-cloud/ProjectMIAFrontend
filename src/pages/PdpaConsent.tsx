@@ -11,6 +11,7 @@ export default function PdpaConsent() {
   const { storeId } = useParams<{ storeId: string }>();
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('กรุณายืนยันความยินยอม PDPA');
+  const bridgeUrl = storeId ? `/liff-bridge?storeId=${storeId}` : '/liff-bridge';
 
   const lineUserId = useMemo(() => {
     return localStorage.getItem('cb_line_user_id');
@@ -81,6 +82,12 @@ export default function PdpaConsent() {
         <p className="text-xs text-gray-400">
           จำเป็นต้องเปิดผ่าน LIFF เพื่อยืนยันตัวตน
         </p>
+        <a
+          className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-emerald-200 text-emerald-600"
+          href={bridgeUrl}
+        >
+          เปิด LIFF อีกครั้ง
+        </a>
       </div>
     </div>
   );

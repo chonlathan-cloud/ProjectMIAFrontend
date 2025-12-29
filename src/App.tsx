@@ -21,6 +21,8 @@ import Inbox from '@/pages/Inbox';
 import KnowledgeView from '@/pages/KnowledgeView';
 import KnowledgeEditor from '@/pages/KnowledgeEditor';
 import Website from '@/pages/Website';
+import WebBuilder from '@/pages/WebBuilder';
+import AiTrainer from '@/pages/AiTrainer';
 import StoreIntegration from '@/pages/settings/StoreIntegration';
 
 import { SignUp } from '@/pages/SignUp';
@@ -133,6 +135,8 @@ function App() {
           <Route path="inbox" element={<Inbox />} />
           <Route path="ab-test" element={<ABTest />} />
           <Route path="website" element={<Website />} />
+          <Route path="web-builder" element={<WebBuilder />} />
+          <Route path="ai-trainer" element={<AiTrainer />} />
 
           <Route path="settings" element={<Settings />} />
           <Route path="settings/store" element={<StoreIntegration />} />

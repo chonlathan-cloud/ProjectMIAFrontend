@@ -27,6 +27,16 @@ interface Message {
   from: string;
 }
 
+type StreamEvent = {
+  id?: string;
+  type?: string;
+  messageText?: string;
+  text?: string;
+  createdAt?: string;
+  timestamp?: any;
+  lineUserId?: string;
+};
+
 export default function Inbox() {
   const { store } = useStore();
   
@@ -43,6 +53,7 @@ export default function Inbox() {
 
   // Refs (สำหรับเลื่อนแชทลงล่างสุด)
   const scrollRef = useRef<HTMLDivElement>(null);
+  const streamRef = useRef<EventSource | null>(null);
 
   // 1. โหลดรายชื่อลูกค้า
   const loadCustomers = async () => {
@@ -51,7 +62,15 @@ export default function Inbox() {
     try {
       const res: any = await getInboxCustomers(store.id);
       if (res?.customers) {
-        setCustomers(res.customers);
+        const normalized = res.customers.map((c: any) => ({
+          id: c.userId || c.id,
+          userId: c.userId || c.id,
+          displayName: c.displayName,
+          pictureUrl: c.pictureUrl,
+          lastMessage: c.lastMessage,
+          lastActivity: c.lastActivity || c.lastTime,
+        }));
+        setCustomers(normalized);
       }
     } catch (error) {
       console.error("Load customers failed", error);
@@ -70,9 +89,16 @@ export default function Inbox() {
     setLoadingChat(true);
     try {
       // ใช้ ID ของ Customer (ซึ่งคือ UserID) ในการดึงแชท
-      const res: any = await getInboxHistory(customer.id);
+      const res: any = await getInboxHistory(customer.id, store.id);
       if (res?.messages) {
-        setMessages(res.messages);
+        const normalized = res.messages.map((m: any, idx: number) => ({
+          id: m.id || `${m.timestamp ?? "no-ts"}-${idx}`,
+          text: m.text,
+          isFromUser: m.isFromUser ?? m.from === "user",
+          timestamp: m.timestamp,
+          from: m.from,
+        }));
+        setMessages(normalized);
       }
     } catch (error) {
       console.error("Load chat failed", error);
@@ -113,6 +139,62 @@ export default function Inbox() {
       setSending(false);
     }
   };
+
+  // 4. Realtime stream (SSE)
+  useEffect(() => {
+    if (!selectedCustomer || !store?.id) return;
+
+    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+    const path = `/inbox/stream/${selectedCustomer.id}?storeId=${encodeURIComponent(store.id)}`;
+    const url = base.startsWith("http") ? `${base}${path}` : path;
+
+    if (streamRef.current) {
+      streamRef.current.close();
+    }
+
+    const es = new EventSource(url);
+    streamRef.current = es;
+
+    es.onmessage = (evt) => {
+      try {
+        const data = JSON.parse(evt.data) as StreamEvent;
+        if (data.lineUserId && data.lineUserId !== selectedCustomer.id) return;
+        const text = data.messageText || data.text || "";
+        if (!text) return;
+
+        const isFromUser = data.type?.startsWith("message") ?? true;
+        const incoming: Message = {
+          id: data.id || `${Date.now()}-${Math.random()}`,
+          text,
+          isFromUser,
+          timestamp: data.createdAt || data.timestamp || Date.now(),
+          from: isFromUser ? "user" : "system",
+        };
+
+        setMessages((prev) => [...prev, incoming]);
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === selectedCustomer.id
+              ? { ...c, lastMessage: text, lastActivity: incoming.timestamp }
+              : c
+          )
+        );
+      } catch (err) {
+        console.error("SSE parse error:", err);
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error("SSE error:", err);
+    };
+
+    return () => {
+      es.close();
+      if (streamRef.current === es) {
+        streamRef.current = null;
+      }
+    };
+  }, [selectedCustomer?.id, store?.id]);
 
   if (!store) return <div className="p-10 text-center">กรุณาเลือกร้านค้า</div>;
 

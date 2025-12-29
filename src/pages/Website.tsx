@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useStore } from "@/store/useStore";
+import { useNavigate } from "react-router-dom";
 import { authedJson } from "@/lib/api";
 
 type SiteConfig = {
@@ -28,17 +30,17 @@ type AnalyticsResponse = {
 };
 
 export default function Website() {
+  const navigate = useNavigate();
+  const { store } = useStore();
   const [loading, setLoading] = useState(true);
   const [sites, setSites] = useState<SitesResponse | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // storeId จริงของร้าน
-  const storeId = import.meta.env.VITE_STORE_ID || "test-store-001";
+  const storeId = store?.id || import.meta.env.VITE_STORE_ID || "";
 
-  // Builder URL (สำหรับข้อ 1)
-  const builderBase = import.meta.env.VITE_BUILDER_URL || "http://localhost:5173";
-  const builderUrl = `${builderBase}/?storeId=${encodeURIComponent(storeId)}`;
+  const builderUrl = `${window.location.origin}/web-builder`;
 
   async function loadAll() {
     setLoading(true);
@@ -46,10 +48,10 @@ export default function Website() {
     try {
       const [sitesRes, analyticsRes] = await Promise.all([
         authedJson<SitesResponse>(
-          `/api/sites?storeId=${encodeURIComponent(storeId)}`
+          `/sites?storeId=${encodeURIComponent(storeId)}`
         ),
         authedJson<AnalyticsResponse>(
-          `/api/sites/analytics?storeId=${encodeURIComponent(storeId)}&days=7`
+          `/sites/analytics?storeId=${encodeURIComponent(storeId)}&days=7`
         ),
       ]);
 
@@ -67,6 +69,7 @@ export default function Website() {
   }
 
   useEffect(() => {
+    if (!storeId) return;
     loadAll();
   }, [storeId]);
 
@@ -86,7 +89,14 @@ export default function Website() {
         </button>
       </div>
 
-      {loading && <div className="p-4 bg-white rounded-xl">Loading...</div>}
+      {!storeId && (
+        <div className="p-4 bg-amber-50 text-amber-700 rounded-xl">
+          กรุณาเลือกร้านค้าก่อน
+        </div>
+      )}
+      {loading && storeId && (
+        <div className="p-4 bg-white rounded-xl">Loading...</div>
+      )}
       {error && (
         <div className="p-4 bg-red-50 text-red-700 rounded-xl">{error}</div>
       )}
@@ -143,7 +153,7 @@ export default function Website() {
             <div className="text-sm text-gray-500">Website Builder</div>
             <div className="text-sm text-gray-700 mt-2 break-all">{builderUrl}</div>
             <button
-              onClick={() => window.open(builderUrl, "_blank")}
+              onClick={() => navigate("/web-builder")}
               className="mt-3 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 w-full"
             >
               เปิด Website Builder

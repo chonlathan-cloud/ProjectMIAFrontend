@@ -181,35 +181,51 @@ export function Broadcast() {
   };
 
   return (
-    <div className="relative">
-      <div className="absolute inset-0 pointer-events-none select-none opacity-10 flex items-center justify-center">
-        <img src="/image/logo_mia.jpg" alt="Mia-Connect BoosteSME watermark" className="w-[120vw] max-w-none object-contain" />
+    <div className="relative overflow-hidden" style={{ animation: 'broadcast-fade 0.6s ease-out' }}>
+      <style>
+        {`
+          @keyframes broadcast-fade {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
+      <div className="absolute -top-32 -right-24 h-96 w-96 rounded-full bg-emerald-200/40 blur-3xl" />
+      <div className="absolute -bottom-40 left-10 h-[28rem] w-[28rem] rounded-full bg-amber-200/40 blur-[120px]" />
+      <div className="absolute inset-0 pointer-events-none select-none opacity-[0.08] flex items-center justify-center">
+        <img src="/image/logo_mia.jpg" alt="Mia watermark" className="w-[120vw] max-w-none object-contain" />
       </div>
 
-      <div className="relative max-w-screen-2xl mx-auto px-5 lg:px-10 space-y-6">
-        <Card className="border-0 bg-gradient-to-r from-white via-emerald-50 to-[#008080]/10 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 shadow-xl">
-          <CardContent className="p-6 lg:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="space-y-3">
-                <p className="text-sm uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Broadcast Center</p>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white">ส่งข้อความ</h1>
+      <div className="relative max-w-screen-2xl mx-auto px-5 lg:px-10 space-y-8">
+        <Card className="border-0 bg-gradient-to-br from-white via-emerald-50 to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-emerald-950 shadow-xl">
+          <CardContent className="p-6 lg:p-10">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                  <span className="rounded-full border border-emerald-300/60 px-3 py-1">AI Action Layer</span>
+                  <span className="rounded-full border border-amber-300/60 px-3 py-1">MCP Enabled</span>
+                </div>
+                <h1 className="text-4xl lg:text-5xl font-semibold text-gray-900 dark:text-white">
+                  Broadcast Command Center
+                </h1>
                 <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
-                  สร้างแบรอดแคสต์ที่ดูมืออาชีพ เลือกใช้ AI เพื่อเร่งการเขียน และส่งได้ทันที
+                  พิมพ์คำสั่งธรรมชาติให้ AI สร้างข้อความ (Text / Card / Flex) แล้วส่งผ่าน LINE OA ได้ทันที
+                  พร้อมตัวอย่างและการอัปโหลดภาพสำหรับ Card
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button size="lg" onClick={handleGenerateAI} disabled={aiLoading}>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    {aiLoading ? 'กำลังสร้าง...' : 'ให้ AI ช่วยร่างข้อความ'}
+                    {aiLoading ? 'กำลังสร้าง...' : 'สร้างด้วย AI Action'}
                   </Button>
                   <Button variant="outline" size="lg" className="text-base" onClick={handleSend} disabled={!canSend}>
-                    ส่งทันที
+                    ส่งข้อความธรรมดาทันที
                   </Button>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/70 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 p-5 shadow-sm min-w-[280px]">
                 <p className="text-sm text-gray-500 dark:text-gray-400">สถานะการส่ง</p>
-                <div className="mt-2 flex flex-col gap-1">
+                <div className="mt-2 flex flex-col gap-2">
                   <Badge variant="outline" className="w-fit">
                     {statusLoading
                       ? 'ตรวจสอบการเชื่อมต่อ...'
@@ -218,7 +234,9 @@ export function Broadcast() {
                       : 'ยังไม่เชื่อมต่อ LINE OA'}
                   </Badge>
                   <p className="text-sm text-gray-700 dark:text-gray-200">
-                    {lineStatus?.connected ? 'พร้อมส่งจริงผ่าน LINE Messaging API' : 'กรุณาเชื่อมต่อ LINE OA ที่หน้า Store Integration'}
+                    {lineStatus?.connected
+                      ? 'พร้อมส่งจริงผ่าน LINE Messaging API'
+                      : 'กรุณาเชื่อมต่อ LINE OA ที่หน้า Store Integration'}
                   </p>
 
                   <div className="mt-2">
@@ -232,23 +250,28 @@ export function Broadcast() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[2.2fr_1fr] gap-6">
+          <div className="space-y-6">
             <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-2xl">สร้างข้อความใหม่</CardTitle>
-                <CardDescription className="text-lg">เขียนข้อความหรือใช้ AI ช่วยสร้าง</CardDescription>
+                <CardTitle className="text-2xl">คำสั่งหลัก</CardTitle>
+                <CardDescription className="text-lg">พิมพ์ข้อความตั้งต้น แล้วให้ AI เลือก layout ที่เหมาะสม</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Textarea
-                    placeholder="เขียนข้อความที่ต้องการส่ง หรือพิมพ์หัวข้อเพื่อให้ AI ช่วยสร้าง..."
+                    placeholder="ตัวอย่าง: ช่วยบรอดแคสต์โปรส้มตำ 29 บาท ให้ลูกค้ากลุ่มหิวดึก พร้อมปุ่มสั่งซื้อ"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={8}
                     className="resize-none"
                   />
-                  <p className="text-sm text-gray-500">{message.length} / 1000 ตัวอักษร</p>
+                  <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
+                    <span>{message.length} / 1000 ตัวอักษร</span>
+                    <span className="text-xs text-emerald-700">
+                      AI จะสร้าง 3 แบบ: text / card / flex
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -263,7 +286,7 @@ export function Broadcast() {
                   </Button>
                   <Button onClick={handleSend} className="flex-1" disabled={!canSend}>
                     <Send className="w-5 h-5 mr-2" />
-                    {sending ? 'กำลังส่ง...' : 'ส่งข้อความ'}
+                    {sending ? 'กำลังส่ง...' : 'ส่งข้อความธรรมดา'}
                   </Button>
                 </div>
 
@@ -278,10 +301,8 @@ export function Broadcast() {
             {aiDrafts.length > 0 && (
               <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-2xl">ตัวอย่างข้อความจาก AI</CardTitle>
-                  <CardDescription className="text-lg">
-                    เลือก 1 แบบเพื่อส่ง (ข้อความ, Card, Flex)
-                  </CardDescription>
+                  <CardTitle className="text-2xl">AI Output</CardTitle>
+                  <CardDescription className="text-lg">เลือกแบบที่ต้องการส่งผ่าน MCP</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -355,9 +376,9 @@ export function Broadcast() {
                   ) : null}
 
                   {selectedDraft?.type === 'card' && (
-                    <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                        แนบรูปสำหรับ Card (จะอัปโหลดและแทนที่ imageUrl)
+                    <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-4 bg-amber-50/40 dark:bg-amber-900/10">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        แนบรูปสำหรับ Card (ระบบจะอัปโหลดและแทนที่ imageUrl)
                       </p>
                       <input
                         ref={fileInputRef}
@@ -447,6 +468,27 @@ export function Broadcast() {
           </div>
 
           <div className="space-y-6">
+            <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-2xl">เส้นทางการส่ง</CardTitle>
+                <CardDescription className="text-lg">แสดงรูปแบบที่ API รองรับ</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+                <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/60 p-4">
+                  <p className="font-semibold text-emerald-800">AI Broadcast (MCP)</p>
+                  <p>สร้าง text/card/flex จากภาษาธรรมชาติ แล้วส่งผ่าน MCP endpoint</p>
+                </div>
+                <div className="rounded-xl border border-slate-200/70 bg-white/70 p-4">
+                  <p className="font-semibold text-gray-800">ข้อความธรรมดา</p>
+                  <p>ส่งตาม API เดิม เหมาะกับข้อความสั้น หรือทดสอบเร็ว</p>
+                </div>
+                <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 p-4">
+                  <p className="font-semibold text-amber-800">Card + รูป</p>
+                  <p>อัปโหลดรูปเพื่อแทนที่ imageUrl ก่อนส่ง ช่วยให้โปรโมชันดูเด่น</p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="border border-white/70 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-2xl">ผู้รับ</CardTitle>

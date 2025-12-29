@@ -14,16 +14,6 @@ import {
   __toESM
 } from "./chunk-5WRI5ZAA.js";
 
-// node_modules/@radix-ui/primitive/dist/index.mjs
-function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
-  return function handleEvent(event) {
-    originalEventHandler?.(event);
-    if (checkForDefaultPrevented === false || !event.defaultPrevented) {
-      return ourEventHandler?.(event);
-    }
-  };
-}
-
 // node_modules/@radix-ui/react-direction/dist/index.mjs
 var React = __toESM(require_react(), 1);
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
@@ -160,8 +150,7 @@ function getElementRef(element) {
 }
 
 export {
-  composeEventHandlers,
   useDirection,
   Presence
 };
-//# sourceMappingURL=chunk-SB4EDQLH.js.map
+//# sourceMappingURL=chunk-UZYO47FA.js.map

@@ -30,7 +30,7 @@ export default function SitePreview({
 }: SitePreviewProps) {
   const accent = config.themeColor || "#16a34a";
   const accentSoft = `${accent}22`;
-  const name = config.businessName || businessNameFallback || "LineBoost Store";
+  const name = config.businessName || businessNameFallback || "Mia-Connect Store";
   const headline = config.heroHeadline || `ยินดีต้อนรับสู่ ${name}`;
   const subheadline =
     config.heroSubheadline || "เว็บไซต์หน้าร้านที่เชื่อมต่อกับ LINE OA ของคุณ";

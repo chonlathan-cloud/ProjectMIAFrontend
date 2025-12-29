@@ -1,40 +1,190 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useStore } from '@/store/useStore';
+import { getInboxCustomers } from '@/lib/api';
+import { RefreshCw, Users } from 'lucide-react';
+import { format } from 'date-fns';
+import { th } from 'date-fns/locale';
 
 export function Customers() {
+  const { store } = useStore();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadCustomers = async () => {
+    if (!store?.id) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res: any = await getInboxCustomers(store.id);
+      const normalized = (res?.customers || []).map((c: any) => ({
+        id: c.userId || c.id,
+        userId: c.userId || c.id,
+        displayName: c.displayName || 'ลูกค้าใหม่',
+        pictureUrl: c.pictureUrl || undefined,
+        lastMessage: c.lastMessage || '',
+        lastTime: c.lastTime || c.lastActivity || null,
+        pdpaConsentAccepted: !!c.pdpaConsentAccepted,
+      }));
+      setCustomers(normalized);
+    } catch (err: any) {
+      console.error('Load customers failed', err);
+      setError(err?.message || 'โหลดรายชื่อลูกค้าไม่สำเร็จ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+  }, [store?.id]);
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return customers;
+    return customers.filter((customer) => {
+      const haystack = [
+        customer.displayName,
+        customer.userId,
+        customer.lastMessage,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [customers, query]);
+
+  if (!store) return <div className="p-10 text-center">กรุณาเลือกร้านค้า</div>;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ลูกค้า</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">ข้อมูลลูกค้าจะดึงจาก Backend เท่านั้น (ลบข้อมูลเดโมแล้ว)</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ลูกค้า</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
+            รายชื่อลูกค้าจาก Inbox เพื่อใช้ติดตามและสื่อสารแบบเจาะจง
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ค้นหาชื่อ, LINE ID, หรือข้อความล่าสุด"
+            className="w-64"
+          />
+          <Button variant="outline" size="icon" onClick={loadCustomers} disabled={loading}>
+            <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          </Button>
+        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>รายชื่อลูกค้า</CardTitle>
-          <CardDescription>กำลังรอเชื่อมต่อข้อมูลจริง</CardDescription>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>รายชื่อลูกค้า</CardTitle>
+              <CardDescription>ดึงข้อมูลล่าสุดจาก /api/inbox/customers</CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+              <Badge variant="outline">ทั้งหมด {customers.length}</Badge>
+              <Badge variant="outline">
+                PDPA OK {customers.filter((c) => c.pdpaConsentAccepted).length}
+              </Badge>
+            </div>
+          </div>
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center border border-dashed border-gray-200 dark:border-gray-800 rounded-xl p-8 gap-3">
-            <div className="w-12 h-12 rounded-full bg-line/10 text-line flex items-center justify-center">
-              <Users className="w-6 h-6" />
+          {loading ? (
+            <div className="flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-8 gap-3">
+              <div className="w-12 h-12 rounded-full bg-line/10 text-line flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+              <p className="text-sm text-gray-500">กำลังโหลดรายชื่อลูกค้า...</p>
             </div>
-            <p className="text-base text-gray-700 dark:text-gray-200 font-semibold">ยังไม่มีข้อมูลลูกค้า</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              เชื่อมต่อ Backend และ API รายชื่อลูกค้าจริง จากนั้นดึงข้อมูลมาแสดงที่หน้านี้
-            </p>
-            <div className="flex gap-2">
-              <Badge variant="outline">GET /api/customers (ตัวอย่าง)</Badge>
-              <Badge variant="outline">รองรับการค้นหา/แบ่งกลุ่ม</Badge>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-xl p-8 gap-3">
+              <div className="w-12 h-12 rounded-full bg-line/10 text-line flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+              <p className="text-base text-gray-700 font-semibold">ยังไม่มีข้อมูลลูกค้า</p>
+              <p className="text-sm text-gray-500 text-center">
+                หากมีลูกค้าทักผ่าน LINE ข้อมูลจะเข้ามาในหน้านี้อัตโนมัติ
+              </p>
             </div>
-            <Button variant="outline" onClick={() => window.open('https://developers.line.biz/', '_blank')}>
-              เปิด Line Developers
-            </Button>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-gray-200">
+              <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-semibold text-gray-500 bg-gray-50 border-b">
+                <div className="col-span-5">ลูกค้า</div>
+                <div className="col-span-4">ข้อความล่าสุด</div>
+                <div className="col-span-2">ล่าสุด</div>
+                <div className="col-span-1 text-right">PDPA</div>
+              </div>
+              <ScrollArea className="max-h-[520px]">
+                {filtered.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0"
+                  >
+                    <div className="col-span-5 flex items-center gap-3 min-w-0">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={customer.pictureUrl} />
+                        <AvatarFallback>{customer.displayName?.[0] || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {customer.displayName || 'ลูกค้าใหม่'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{customer.userId}</p>
+                      </div>
+                    </div>
+                    <div className="col-span-4 text-sm text-gray-600 truncate">
+                      {customer.lastMessage || '-'}
+                    </div>
+                    <div className="col-span-2 text-xs text-gray-500">
+                      {formatTimestamp(customer.lastTime)}
+                    </div>
+                    <div className="col-span-1 text-right">
+                      {customer.pdpaConsentAccepted ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                          OK
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">N/A</Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </ScrollArea>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
+}
+
+type Customer = {
+  id: string;
+  userId: string;
+  displayName: string;
+  pictureUrl?: string;
+  lastMessage?: string;
+  lastTime?: any;
+  pdpaConsentAccepted?: boolean;
+};
+
+function formatTimestamp(ts: any) {
+  if (!ts) return '-';
+  const date = new Date(ts?._seconds ? ts._seconds * 1000 : ts);
+  if (isNaN(date.getTime())) return '-';
+  return format(date, 'dd MMM HH:mm', { locale: th });
 }

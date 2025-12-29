@@ -76,7 +76,7 @@ export function Dashboard() {
   if (!store) {
     return (
       <div className="p-10 space-y-6 text-center">
-        <h1 className="text-3xl font-bold">ยินดีต้อนรับสู่ LineBoost 🎉</h1>
+        <h1 className="text-3xl font-bold">ยินดีต้อนรับสู่ Mia-Connect BoosteSME 🎉</h1>
         <p className="text-gray-600 max-w-xl mx-auto">
           กรุณาตั้งค่า Line OA เพื่อเริ่มใช้งานระบบ
         </p>

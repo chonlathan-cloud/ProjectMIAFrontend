@@ -6,7 +6,7 @@ const navItems = [
   { path: '/dashboard', icon: Home, label: 'หน้าหลัก' },
   { path: '/broadcast', icon: Send, label: 'ส่งข้อความ' },
   { path: '/analytics', icon: BarChart3, label: 'รายงาน' },
-  { path: '/settings', icon: Settings, label: 'ตั้งค่า' },
+  { path: '/settings/store', icon: Settings, label: 'ตั้งค่า LINE Token' },
 ];
 
 export function MobileBottomNav() {

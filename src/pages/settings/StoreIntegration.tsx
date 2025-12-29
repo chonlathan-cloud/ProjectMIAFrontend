@@ -181,7 +181,7 @@ export default function StoreIntegration() {
               <Input
                 value={newStoreName}
                 onChange={(e) => setNewStoreName(e.target.value)}
-                placeholder="เช่น LineBoost Cafe"
+                placeholder="เช่น Mia-Connect Cafe"
               />
             </div>
             <Button onClick={handleCreateStore} disabled={creatingStore} className="w-full bg-black text-white">

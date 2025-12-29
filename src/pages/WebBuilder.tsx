@@ -45,7 +45,7 @@ const templates: Array<{
     config: {
       category: "cafe",
       templateId: "cafe-minimal",
-      businessName: "LineBoost Cafe",
+      businessName: "Mia-Connect Cafe",
       tagline: "Slow bar & specialty",
       heroHeadline: "กาแฟหอมละมุนในทุกวัน",
       heroSubheadline: "คัดเมล็ดพิเศษ พร้อมขนมอบสดใหม่",
@@ -355,7 +355,7 @@ export default function WebBuilder() {
                 <Input
                   value={config.slug || ""}
                   onChange={(e) => setConfig({ ...config, slug: e.target.value })}
-                  placeholder="เช่น lineboost-cafe"
+                  placeholder="เช่น mia-connect-cafe"
                 />
               </div>
               <div>

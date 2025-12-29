@@ -1,4 +1,4 @@
-import { Home, Send, BarChart3, Users, Settings, TestTube2, MessageSquare, X } from 'lucide-react';
+import { Home, Send, BarChart3, Users, Settings, MessageSquare, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,6 @@ const navItems = [
   { path: "/ai-trainer", icon: MessageSquare, label: "AI Trainer" },
   { path: '/customers', icon: Users, label: 'ลูกค้า' },
   { path: '/inbox', icon: MessageSquare, label: 'กล่องข้อความ' },
-  { path: '/ab-test', icon: TestTube2, label: 'A/B Testing' },
   { path: '/settings', icon: Settings, label: 'ตั้งค่า' },
 ];
 
@@ -49,13 +48,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               <div className="w-11 h-11 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-200/50 dark:ring-emerald-700/50 bg-white">
                 <img
                   src="/image/logo_mia.jpg"
-                  alt="LineBoost Logo"
+                  alt="Mia-Connect BoosteSME Logo"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">LineBoost</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">SME Edition</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Mia-Connect</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">BoosteSME</p>
               </div>
             </div>
             <button
@@ -110,7 +109,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
           <div className="px-6 py-5 border-t border-gray-200/80 dark:border-gray-800/80">
             <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              © 2025 LineBoost SME
+              © 2025 Mia-Connect BoosteSME
             </div>
           </div>
         </div>

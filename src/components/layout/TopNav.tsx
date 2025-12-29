@@ -40,7 +40,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           <div className="hidden lg:block leading-tight">
             <p className="text-sm text-gray-500">แดชบอร์ดธุรกิจ</p>
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-              {user?.name ? `ยินดีต้อนรับ, ${user.name}` : 'LineBoost SME'}
+              {user?.name ? `ยินดีต้อนรับ, ${user.name}` : 'Mia-Connect BoosteSME'}
             </h2>
           </div>
         </div>

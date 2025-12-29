@@ -1,72 +1,66 @@
-import { Check, Crown, Zap, Link as LinkIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
-import { tierFeatures } from '@/lib/plans';
-import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Switch } from '@/components/ui/switch';
+import { getAiSettings, updateAiSettings } from '@/lib/api';
 
 export function Settings() {
-  const { user, setUser } = useStore();
+  const { user, store } = useStore();
   const navigate = useNavigate();
+  const [aiEnabled, setAiEnabled] = useState<boolean>(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
-  const handleUpgrade = (tier: 'starter' | 'growth' | 'enterprise') => {
-    if (user) {
-      setUser({ ...user, tier });
-      toast.success(`อัพเกรดเป็นแพ็คเกจ ${tierFeatures[tier].name} สำเร็จ!`);
+  useEffect(() => {
+    if (!store?.id) return;
+    const load = async () => {
+      setAiError(null);
+      try {
+        const res: any = await getAiSettings(store.id);
+        const enabled = res?.aiEnable ?? res?.data?.aiEnable ?? true;
+        setAiEnabled(!!enabled);
+      } catch (err: any) {
+        console.error("load ai settings failed:", err);
+        setAiError(err?.message || "โหลดสถานะ AI ไม่สำเร็จ");
+      }
+    };
+    load();
+  }, [store?.id]);
+
+  const handleToggleAi = async (next: boolean) => {
+    if (!store?.id) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiEnabled(next);
+    try {
+      await updateAiSettings(store.id, next);
+    } catch (err: any) {
+      console.error("update ai settings failed:", err);
+      setAiError(err?.message || "บันทึกสถานะ AI ไม่สำเร็จ");
+      setAiEnabled(!next);
+    } finally {
+      setAiLoading(false);
     }
   };
-
-  const tiers = [
-    {
-      id: 'starter' as const,
-      name: tierFeatures.starter.name,
-      price: tierFeatures.starter.price,
-      features: tierFeatures.starter.features,
-      icon: Zap,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50 dark:bg-gray-900',
-      borderColor: 'border-gray-200 dark:border-gray-800',
-    },
-    {
-      id: 'growth' as const,
-      name: tierFeatures.growth.name,
-      price: tierFeatures.growth.price,
-      features: tierFeatures.growth.features,
-      icon: Crown,
-      color: 'text-line',
-      bgColor: 'bg-green-50 dark:bg-green-950',
-      borderColor: 'border-line',
-      popular: true,
-    },
-    {
-      id: 'enterprise' as const,
-      name: tierFeatures.enterprise.name,
-      price: tierFeatures.enterprise.price,
-      features: tierFeatures.enterprise.features,
-      icon: Crown,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-950',
-      borderColor: 'border-yellow-200 dark:border-yellow-800',
-    },
-  ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ตั้งค่า</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-2">
-          จัดการแพ็คเกจ การตั้งค่าบัญชี และการเชื่อมต่อระบบ
+          จัดการการเชื่อมต่อ LINE OA และข้อมูลบัญชี
         </p>
       </div>
 
-      {/* 🔥 NEW: การเชื่อมต่อร้านค้า / LINE OA */}
       <Card>
         <CardHeader>
-          <CardTitle>การเชื่อมต่อร้านค้า (Store Integration)</CardTitle>
+          <CardTitle>การเชื่อมต่อ LINE OA</CardTitle>
           <CardDescription>
-            ตั้งค่า LINE OA, Channel Access Token และผูกร้านกับระบบ
+            ตั้งค่า Channel Access Token และผูกร้านกับระบบ
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,114 +69,40 @@ export function Settings() {
             className="w-full bg-emerald-600 text-white flex items-center gap-2"
           >
             <LinkIcon className="w-4 h-4" />
-            เปิดหน้าเชื่อมต่อ LINE OA / ร้านค้า
+            ตั้งค่า LINE Token และผูกร้าน
           </Button>
         </CardContent>
       </Card>
 
-      {/* ----------------------- แพ็คเกจเดิม ----------------------- */}
       <Card>
         <CardHeader>
-          <CardTitle>แพ็คเกจปัจจุบัน</CardTitle>
-          <CardDescription>
-            คุณกำลังใช้งานแพ็คเกจ {tierFeatures[user?.tier || 'starter'].name}
-          </CardDescription>
+          <CardTitle>การตั้งค่า AI</CardTitle>
+          <CardDescription>เปิด/ปิดการตอบกลับอัตโนมัติของ MIA ต่อร้าน</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-line rounded-full flex items-center justify-center">
-                <Crown className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">
-                  {tierFeatures[user?.tier || 'starter'].name}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  ฿{tierFeatures[user?.tier || 'starter'].price.toLocaleString()}/เดือน
-                </p>
-              </div>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 p-4">
+            <div>
+              <p className="font-medium text-gray-900">AI Auto Reply</p>
+              <p className="text-sm text-gray-500">ต้องให้ลูกค้ายอมรับ PDPA ก่อนจึงตอบได้</p>
             </div>
-            <Badge className="bg-line text-white">ใช้งานอยู่</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={aiEnabled ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700"}>
+                {aiEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}
+              </Badge>
+              <Switch
+                checked={aiEnabled}
+                onCheckedChange={handleToggleAi}
+                disabled={!store?.id || aiLoading}
+              />
+            </div>
           </div>
+          {aiError ? <p className="text-sm text-red-600">{aiError}</p> : null}
+          {!store?.id ? (
+            <p className="text-sm text-gray-500">กรุณาเลือกร้านก่อนตั้งค่า AI</p>
+          ) : null}
         </CardContent>
       </Card>
 
-      {/* ----------------------- เลือกแพ็คเกจ ----------------------- */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          เลือกแพ็คเกจ
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {tiers.map((tier) => {
-            const Icon = tier.icon;
-            const isCurrentTier = user?.tier === tier.id;
-
-            return (
-              <Card
-                key={tier.id}
-                className={`relative ${tier.borderColor} ${
-                  tier.popular ? 'border-2 shadow-lg' : ''
-                } ${isCurrentTier ? 'border-2' : ''}`}
-              >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-line text-white">แนะนำ</Badge>
-                  </div>
-                )}
-                {isCurrentTier && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-green-600 text-white">แพ็คเกจปัจจุบัน</Badge>
-                  </div>
-                )}
-
-                <CardHeader className={tier.bgColor}>
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                    <Icon className={`w-8 h-8 ${tier.color}`} />
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">
-                      {tier.price === 0 ? 'ฟรี' : `฿${tier.price.toLocaleString()}`}
-                    </span>
-                    {tier.price > 0 && (
-                      <span className="text-gray-500">/เดือน</span>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="pt-6">
-                  <ul className="space-y-3 mb-6">
-                    {tier.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className="w-5 h-5 text-line flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handleUpgrade(tier.id)}
-                    disabled={isCurrentTier}
-                    className={`w-full ${
-                      isCurrentTier
-                        ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 cursor-not-allowed'
-                        : 'bg-line hover:bg-line-dark'
-                    }`}
-                  >
-                    {isCurrentTier ? 'ใช้งานอยู่' : tier.price === 0 ? 'ดาวน์เกรด' : 'อัพเกรด'}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ----------------------- ข้อมูลบัญชี ----------------------- */}
       <Card>
         <CardHeader>
           <CardTitle>ข้อมูลบัญชี</CardTitle>
@@ -201,13 +121,6 @@ export function Settings() {
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">แพ็คเกจ</p>
-              <p className="font-medium">
-                {tierFeatures[user?.tier || 'starter'].name}
-              </p>
-            </div>
-
-            <div>
               <p className="text-sm text-gray-500">สถานะ</p>
               <Badge className="bg-green-600 text-white">ใช้งานอยู่</Badge>
             </div>
@@ -220,43 +133,6 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* ----------------------- การชำระเงิน ----------------------- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>การชำระเงิน</CardTitle>
-          <CardDescription>ประวัติการชำระเงินและบิล</CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <div>
-                <p className="font-medium">วันที่ 1 พ.ย. 2025</p>
-                <p className="text-sm text-gray-500">Growth Plan</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">฿1,990</p>
-                <Badge className="bg-green-100 text-green-800">ชำระแล้ว</Badge>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <div>
-                <p className="font-medium">วันที่ 1 ต.ค. 2025</p>
-                <p className="text-sm text-gray-500">Growth Plan</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">฿1,990</p>
-                <Badge className="bg-green-100 text-green-800">ชำระแล้ว</Badge>
-              </div>
-            </div>
-          </div>
-
-          <Button variant="outline" className="w-full mt-4">
-            ดูประวัติทั้งหมด
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

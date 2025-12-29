@@ -12,8 +12,8 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 export function Login() {
-  const [email, setEmail] = useState('demo@lineboost.com');
-  const [password, setPassword] = useState('demo1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { setUser } = useStore();
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export function Login() {
 
       setUser({
         id: user.uid,
-        name: user.displayName || user.email || 'LineBoost User',
+        name: user.displayName || user.email || 'Mia-Connect BoosteSME User',
         email: user.email || email,
         tier: 'growth',
         avatar: user.photoURL || undefined,
@@ -66,9 +66,9 @@ export function Login() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Mia-Connect SME</CardTitle>
+            <CardTitle className="text-2xl font-bold">Mia-Connect BoosteSME</CardTitle>
             <CardDescription className="text-base mt-2">
-              เข้าสู่ระบบ Mia-Connect Account
+              เข้าสู่ระบบ Mia-Connect BoosteSME
             </CardDescription>
           </div>
         </CardHeader>
@@ -100,12 +100,6 @@ export function Login() {
               {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p className="mb-2">Demo Account:</p>
-            <p>Email: demo@lineboost.com</p>
-            <p>Password: demo1234</p>
-          </div>
 
           <div className="mt-6 text-center">
             <Button asChild variant="link" className="text-sm">

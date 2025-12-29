@@ -16,7 +16,6 @@ import { Broadcast } from '@/pages/Broadcast';
 import { Analytics } from '@/pages/Analytics';
 import { Customers } from '@/pages/Customers';
 import { Settings } from '@/pages/Settings';
-import { ABTest } from '@/pages/ABTest';
 import Inbox from '@/pages/Inbox';
 import KnowledgeView from '@/pages/KnowledgeView';
 import KnowledgeEditor from '@/pages/KnowledgeEditor';
@@ -83,7 +82,7 @@ function App() {
         if (fbUser) {
           setUser({
             id: fbUser.uid,
-            name: fbUser.displayName || fbUser.email || 'LineBoost User',
+            name: fbUser.displayName || fbUser.email || 'Mia-Connect BoosteSME User',
             email: fbUser.email || '',
             tier: 'growth',
             avatar: fbUser.photoURL || undefined,
@@ -133,7 +132,6 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="customers" element={<Customers />} />
           <Route path="inbox" element={<Inbox />} />
-          <Route path="ab-test" element={<ABTest />} />
           <Route path="website" element={<Website />} />
           <Route path="web-builder" element={<WebBuilder />} />
           <Route path="ai-trainer" element={<AiTrainer />} />

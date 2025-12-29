@@ -188,7 +188,18 @@ export async function getLineCredentials(storeId: string) {
 }
 
 export async function getLineOaLink(storeId: string) {
-  return authedJson(`/stores/${storeId}/line-oa-link`);
+  const res: any = await authedJson(`/stores/${storeId}/line-credentials`);
+  const data = res?.data ?? res;
+  const rawBasicId = data?.basicId || data?.lineId;
+  const basicId =
+    typeof rawBasicId === "string" && rawBasicId.length > 0
+      ? rawBasicId.startsWith("@")
+        ? rawBasicId
+        : `@${rawBasicId}`
+      : "";
+  const lineOaUrl = data?.lineOaUrl || (basicId ? `https://line.me/R/ti/p/${basicId}` : "");
+
+  return { ...data, lineOaUrl };
 }
 
 export async function saveLineCredentials(
@@ -204,6 +215,20 @@ export async function saveLineCredentials(
   return authedJson(`/stores/${storeId}/line-credentials`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+// --------------------------------------------------
+// AI SETTINGS
+// --------------------------------------------------
+export async function getAiSettings(storeId: string) {
+  return authedJson(`/stores/${storeId}/ai-settings`);
+}
+
+export async function updateAiSettings(storeId: string, aiEnable: boolean) {
+  return authedJson(`/stores/${storeId}/ai-settings`, {
+    method: "POST",
+    body: JSON.stringify({ aiEnable }),
   });
 }
 

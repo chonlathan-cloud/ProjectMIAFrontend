@@ -85,6 +85,7 @@ export default function Inbox() {
 
   // 2. โหลดประวัติแชท เมื่อเลือกคน
   const loadChat = async (customer: Customer) => {
+    if (!store?.id) return;
     setSelectedCustomer(customer);
     setLoadingChat(true);
     try {

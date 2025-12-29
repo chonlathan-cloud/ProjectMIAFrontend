@@ -183,7 +183,7 @@ export function Broadcast() {
   return (
     <div className="relative">
       <div className="absolute inset-0 pointer-events-none select-none opacity-10 flex items-center justify-center">
-        <img src="/image/logo_mia.jpg" alt="LineBoost watermark" className="w-[120vw] max-w-none object-contain" />
+        <img src="/image/logo_mia.jpg" alt="Mia-Connect BoosteSME watermark" className="w-[120vw] max-w-none object-contain" />
       </div>
 
       <div className="relative max-w-screen-2xl mx-auto px-5 lg:px-10 space-y-6">

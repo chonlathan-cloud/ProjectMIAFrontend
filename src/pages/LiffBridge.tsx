@@ -63,7 +63,7 @@ export default function LiffBridge() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-slate-100 p-6">
       <div className="max-w-lg w-full bg-white shadow-xl rounded-2xl p-6 text-center space-y-3">
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
-          LineBoost SME
+          Mia-Connect BoosteSME
         </p>
         <h1 className="text-2xl font-bold text-gray-900">Mia Bridge</h1>
         <p className="text-gray-600">{message}</p>

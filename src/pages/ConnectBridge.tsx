@@ -11,7 +11,7 @@ import { useStore } from '@/store/useStore';
  * ConnectBridge Setup Page
  *
  * This page guides merchants through connecting their own website with
- * the LineBoost backend so that AI can react to customer behaviour.
+ * the Mia-Connect backend so that AI can react to customer behaviour.
  * It generates a personalised script tag containing the user’s uid
  * which must be embedded into the merchant’s storefront.  When the
  * script is loaded it exposes a `connectBridge.sendEvent` function

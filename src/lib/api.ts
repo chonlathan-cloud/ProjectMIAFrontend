@@ -33,6 +33,10 @@ async function getIdToken(): Promise<string> {
   throw new Error("No authenticated user");
 }
 
+export async function getAuthToken(): Promise<string> {
+  return getIdToken();
+}
+
 // --------------------------------------------------
 // INTERNAL: Authenticated fetch
 // --------------------------------------------------

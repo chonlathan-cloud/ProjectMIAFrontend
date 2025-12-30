@@ -1,7 +1,7 @@
 // src/pages/Inbox.tsx
 import { useEffect, useState, useRef } from "react";
 import { useStore } from "@/store/useStore";
-import { getInboxCustomers, getInboxHistory, sendInboxMessage } from "@/lib/api";
+import { getAuthToken, getInboxCustomers, getInboxHistory, sendInboxMessage } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,18 +145,10 @@ export default function Inbox() {
   useEffect(() => {
     if (!selectedCustomer || !store?.id) return;
 
-    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-    const path = `/inbox/stream/${selectedCustomer.id}?storeId=${encodeURIComponent(store.id)}`;
-    const url = base.startsWith("http") ? `${base}${path}` : path;
+    let active = true;
+    let es: EventSource | null = null;
 
-    if (streamRef.current) {
-      streamRef.current.close();
-    }
-
-    const es = new EventSource(url);
-    streamRef.current = es;
-
-    es.onmessage = (evt) => {
+    const handleMessage = (evt: MessageEvent) => {
       try {
         const data = JSON.parse(evt.data) as StreamEvent;
         if (data.lineUserId && data.lineUserId !== selectedCustomer.id) return;
@@ -185,12 +177,37 @@ export default function Inbox() {
       }
     };
 
-    es.onerror = (err) => {
+    const handleError = (err: Event) => {
       console.error("SSE error:", err);
     };
 
+    const startStream = async () => {
+      try {
+        const token = await getAuthToken();
+        if (!active) return;
+
+        const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+        const path = `/inbox/stream/${selectedCustomer.id}?storeId=${encodeURIComponent(store.id)}&token=${encodeURIComponent(token)}`;
+        const url = base.startsWith("http") ? `${base}${path}` : path;
+
+        if (streamRef.current) {
+          streamRef.current.close();
+        }
+
+        es = new EventSource(url);
+        streamRef.current = es;
+        es.onmessage = handleMessage;
+        es.onerror = handleError;
+      } catch (err) {
+        console.error("SSE auth token failed:", err);
+      }
+    };
+
+    startStream();
+
     return () => {
-      es.close();
+      active = false;
+      es?.close();
       if (streamRef.current === es) {
         streamRef.current = null;
       }

@@ -95,7 +95,13 @@ export default function PublicSite() {
                 </p>
                 <div className="flex gap-2">
                   <Button className="flex-1 bg-black text-white text-xs py-2 rounded-lg font-bold" asChild>
-                    <a href={`/pdpa/${siteData.storeId}`}>ยอมรับ</a>
+                    <a
+                      href={`/pdpa/${siteData.storeId}?returnUrl=${encodeURIComponent(
+                        window.location.href
+                      )}`}
+                    >
+                      ยอมรับ
+                    </a>
                   </Button>
                   <button
                     className="px-3 bg-gray-100 text-gray-500 text-xs py-2 rounded-lg font-bold"

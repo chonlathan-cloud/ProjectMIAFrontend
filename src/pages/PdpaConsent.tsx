@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 const resolveApiBase = () => {
@@ -11,11 +11,23 @@ export default function PdpaConsent() {
   const { storeId } = useParams<{ storeId: string }>();
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('กรุณายืนยันความยินยอม PDPA');
-  const bridgeUrl = storeId ? `/liff-bridge?storeId=${storeId}` : '/liff-bridge';
+  const returnUrl = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get('returnUrl');
+    return value ? decodeURIComponent(value) : '';
+  }, []);
 
   const lineUserId = useMemo(() => {
     return localStorage.getItem('cb_line_user_id');
   }, []);
+
+  useEffect(() => {
+    if (status !== 'done' || !returnUrl) return;
+    const timer = window.setTimeout(() => {
+      window.location.replace(returnUrl);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [status, returnUrl]);
 
   const submitConsent = async (consented: boolean) => {
     if (!storeId || !lineUserId) {
@@ -62,7 +74,9 @@ export default function PdpaConsent() {
               <p className="text-xs uppercase tracking-[0.3em] text-emerald-600">
                 Mia-Connect BoosteSME
               </p>
-              <h1 className="text-3xl font-semibold text-gray-900">ความยินยอมในการใช้ข้อมูล (PDPA)</h1>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+                ความยินยอมในการใช้ข้อมูล (PDPA)
+              </h1>
               <p className="text-gray-600">
                 เพื่อให้คุณได้รับประสบการณ์ที่เหมาะสมกับร้านค้า เราขอความยินยอมในการจัดเก็บและใช้ข้อมูลบางส่วน
               </p>
@@ -106,7 +120,7 @@ export default function PdpaConsent() {
           <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-8 lg:p-10 flex flex-col justify-between gap-6">
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-emerald-100">Consent Status</p>
-              <p className="text-2xl font-semibold">ยืนยันสิทธิการใช้งาน</p>
+              <p className="text-xl sm:text-2xl font-semibold">ยืนยันสิทธิการใช้งาน</p>
               <p className="text-emerald-100">{message}</p>
             </div>
 
@@ -128,13 +142,14 @@ export default function PdpaConsent() {
             </div>
 
             <div className="space-y-2 text-xs text-emerald-100">
-              <p>จำเป็นต้องเปิดผ่าน LIFF เพื่อยืนยันตัวตน</p>
-              <a
-                className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-white/40 text-white"
-                href={bridgeUrl}
-              >
-                เปิด LIFF อีกครั้ง
-              </a>
+              {returnUrl && status === 'done' && (
+                <a
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-white/40 text-white"
+                  href={returnUrl}
+                >
+                  กลับไปหน้าเว็บ
+                </a>
+              )}
               {status === 'error' && (
                 <p className="text-amber-200">บันทึกไม่สำเร็จ กรุณาลองใหม่</p>
               )}

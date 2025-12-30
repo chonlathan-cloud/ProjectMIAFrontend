@@ -656,11 +656,11 @@ export default function WebBuilder() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
-                    Logo URL
+                    LINE OA Link
                   </label>
                   <Input
-                    value={config.business.logoUrl || ""}
-                    onChange={(e) => updateBusiness("logoUrl", e.target.value)}
+                    value={config.hero.ctaUrl || lineOaUrl}
+                    onChange={(e) => updateHero("ctaUrl", e.target.value)}
                   />
                 </div>
               </div>

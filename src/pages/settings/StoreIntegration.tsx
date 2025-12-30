@@ -128,7 +128,7 @@ export default function StoreIntegration() {
       });
 
       toast.success("บันทึกโทเคน LINE สำเร็จ");
-      navigate("/broadcast");
+      navigate("/web-builder");
     } catch (err: any) {
       toast.error(err?.message || "บันทึกไม่สำเร็จ");
     } finally {

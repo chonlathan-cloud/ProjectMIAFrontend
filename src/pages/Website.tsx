@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { useNavigate } from "react-router-dom";
 import { authedJson } from "@/lib/api";
-
-type SiteConfig = {
-  businessName?: string;
-  themeColor?: string;
-  sections?: any[];
-};
+import type { SiteConfig } from "@/components/site/SitePreview";
 
 type SitesResponse = {
   success: boolean;
@@ -41,6 +36,12 @@ export default function Website() {
   const storeId = store?.id || import.meta.env.VITE_STORE_ID || "";
 
   const builderUrl = `${window.location.origin}/web-builder`;
+
+  const getBusinessName = (config?: SiteConfig) => {
+    if (!config) return undefined;
+    const anyConfig: any = config;
+    return anyConfig.business?.name || anyConfig.businessName;
+  };
 
   async function loadAll() {
     setLoading(true);
@@ -115,9 +116,9 @@ export default function Website() {
                 {new Date(sites.draft.updatedAt).toLocaleString()}
               </div>
             )}
-            {sites.draft?.config?.businessName && (
+            {getBusinessName(sites.draft?.config) && (
               <div className="text-sm text-gray-700 mt-2">
-                ชื่อร้าน: {sites.draft.config.businessName}
+                ชื่อร้าน: {getBusinessName(sites.draft?.config)}
               </div>
             )}
           </div>
@@ -139,9 +140,9 @@ export default function Website() {
                     {new Date(sites.published.publishedAt).toLocaleString()}
                   </div>
                 )}
-                {sites.published.config?.businessName && (
+                {getBusinessName(sites.published?.config) && (
                   <div className="text-sm text-gray-700 mt-2">
-                    ชื่อร้าน: {sites.published.config.businessName}
+                    ชื่อร้าน: {getBusinessName(sites.published?.config)}
                   </div>
                 )}
               </>

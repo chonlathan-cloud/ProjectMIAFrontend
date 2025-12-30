@@ -9,6 +9,7 @@ const STORE_KEY = 'cb_store_id';
 export default function LiffBridge() {
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string>('กำลังเชื่อมต่อ LINE...');
+  const [autoRedirecting, setAutoRedirecting] = useState(false);
   const storeId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = params.get('storeId');
@@ -59,6 +60,15 @@ export default function LiffBridge() {
     init();
   }, []);
 
+  useEffect(() => {
+    if (status !== 'ready' || !storeId) return;
+    setAutoRedirecting(true);
+    const timer = window.setTimeout(() => {
+      window.location.replace(`/pdpa/${storeId}`);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [status, storeId]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-slate-100 p-6">
       <div className="max-w-lg w-full bg-white shadow-xl rounded-2xl p-6 text-center space-y-3">
@@ -70,14 +80,14 @@ export default function LiffBridge() {
         {status === 'ready' && (
           <>
             <p className="text-sm text-emerald-600">
-              เชื่อมต่อสำเร็จแล้ว กดเพื่อไปหน้า PDPA
+              เชื่อมต่อสำเร็จแล้ว กำลังพาไปหน้า PDPA
             </p>
             {storeId && (
               <a
                 className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-500 text-white"
                 href={`/pdpa/${storeId}`}
               >
-                ไปหน้า PDPA
+                {autoRedirecting ? 'กำลังพาไป...' : 'ไปหน้า PDPA'}
               </a>
             )}
           </>

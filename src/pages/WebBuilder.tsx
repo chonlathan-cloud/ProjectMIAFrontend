@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
@@ -7,122 +8,236 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { authedJson, getLineOaLink } from "@/lib/api";
-import SitePreview, { SiteConfig } from "@/components/site/SitePreview";
+import { authedJson, getLineOaLink, uploadLineImage } from "@/lib/api";
+import SitePreview, { SiteConfig, SiteConfigV2 } from "@/components/site/SitePreview";
 
 const templates: Array<{
-  id: string;
+  id: SiteConfigV2["templateId"];
   name: string;
-  category: "restaurant" | "cafe" | "clinic";
-  config: SiteConfig;
+  description: string;
+  config: SiteConfigV2;
 }> = [
   {
-    id: "restaurant-classic",
-    name: "ร้านอาหารคลาสสิก",
-    category: "restaurant",
+    id: "apple-minimal",
+    name: "Apple Minimal",
+    description: "หน้าเว็บคลีน อ่านง่าย โฟกัสสินค้าเด่น",
     config: {
-      category: "restaurant",
-      templateId: "restaurant-classic",
-      businessName: "ร้านอาหารบ้านสวน",
-      tagline: "ครัวไทยสูตรดั้งเดิม",
-      heroHeadline: "อิ่มอร่อยแบบโฮมเมดทุกจาน",
-      heroSubheadline: "วัตถุดิบสดใหม่ พร้อมเสิร์ฟและเดลิเวอรี่",
-      heroImageUrl: "",
-      ctaText: "จองโต๊ะผ่าน LINE",
-      ctaUrl: "",
-      themeColor: "#D94F30",
-      highlights: ["เมนูซิกเนเจอร์ทุกสัปดาห์", "วัตถุดิบพรีเมียม", "ส่งด่วนใน 30 นาที"],
-      offerings: ["ข้าวกะเพราเนื้อโคขุน", "ต้มยำกุ้งน้ำข้น", "แกงเขียวหวานไก่"],
-      gallery: [],
-      address: "123 ถนนสุขุมวิท กรุงเทพฯ",
-      phone: "02-000-0000",
+      version: "v2",
+      templateId: "apple-minimal",
+      business: {
+        name: "ConnectBridge Store",
+        tagline: "ร้านค้าสมัยใหม่เชื่อมต่อ LINE",
+        themeColor: "#111827",
+      },
+      hero: {
+        headline: "หน้าร้านที่สะอาด เรียบ และชวนซื้อ",
+        subheadline: "Mobile-first full layout สำหรับ SME ที่ต้องการปิดการขายเร็ว",
+        ctaText: "คุยกับร้านผ่าน LINE",
+        ctaUrl: "",
+        imageUrl: "",
+      },
+      products: [
+        {
+          id: "product-1",
+          name: "สินค้าเด่นประจำสัปดาห์",
+          price: "890",
+          imageUrl: "",
+          url: "",
+          shortDesc: "ขายดีสุดในหมวดนี้",
+          tags: ["best-seller"],
+        },
+        {
+          id: "product-2",
+          name: "สินค้าขายดี",
+          price: "1290",
+          imageUrl: "",
+          url: "",
+          shortDesc: "โปรโมชันพิเศษสำหรับลูกค้า LINE",
+          tags: ["promo"],
+        },
+      ],
+      sections: {
+        highlights: [
+          "สินค้าใหม่อัปเดตทุกสัปดาห์",
+          "ตอบกลับไวผ่าน LINE OA",
+          "จัดส่งภายใน 24 ชั่วโมง",
+        ],
+        trust: [
+          "ยืนยันตัวตนด้วย LINE",
+          "เก็บข้อมูลตามมาตรฐาน PDPA",
+          "บันทึก RoPA ทุกการยินยอม",
+        ],
+        gallery: [],
+      },
+      pdpa: {
+        showBanner: true,
+        policyVersion: "v1",
+      },
     },
   },
   {
-    id: "cafe-minimal",
-    name: "คาเฟ่มินิมอล",
-    category: "cafe",
+    id: "apple-commerce",
+    name: "Apple Commerce",
+    description: "เน้นภาพสินค้าใหญ่และ CTA ชัด",
     config: {
-      category: "cafe",
-      templateId: "cafe-minimal",
-      businessName: "Mia-Connect Cafe",
-      tagline: "Slow bar & specialty",
-      heroHeadline: "กาแฟหอมละมุนในทุกวัน",
-      heroSubheadline: "คัดเมล็ดพิเศษ พร้อมขนมอบสดใหม่",
-      heroImageUrl: "",
-      ctaText: "สั่งเครื่องดื่มผ่าน LINE",
-      ctaUrl: "",
-      themeColor: "#6F4E37",
-      highlights: ["เมล็ดกาแฟคัดพิเศษ", "เบเกอรี่อบใหม่ทุกวัน", "พื้นที่นั่งทำงานสบาย"],
-      offerings: ["Latte Signature", "Cold Brew Citrus", "Matcha Cloud"],
-      gallery: [],
-      address: "88 ถนนสีลม กรุงเทพฯ",
-      phone: "02-111-2222",
-    },
-  },
-  {
-    id: "clinic-clean",
-    name: "คลินิกสะอาด",
-    category: "clinic",
-    config: {
-      category: "clinic",
-      templateId: "clinic-clean",
-      businessName: "Smile Care Clinic",
-      tagline: "ดูแลสุขภาพด้วยทีมแพทย์ผู้เชี่ยวชาญ",
-      heroHeadline: "สุขภาพดีเริ่มต้นได้ที่นี่",
-      heroSubheadline: "นัดหมายง่าย ดูแลครบวงจร พร้อมติดตามผล",
-      heroImageUrl: "",
-      ctaText: "นัดหมายผ่าน LINE",
-      ctaUrl: "",
-      themeColor: "#1E88E5",
-      highlights: ["แพทย์เฉพาะทางประจำ", "ห้องตรวจมาตรฐาน", "แจ้งเตือนนัดหมายอัตโนมัติ"],
-      offerings: ["ตรวจสุขภาพทั่วไป", "ทันตกรรม", "ผิวพรรณและความงาม"],
-      gallery: [],
-      address: "55 ถนนพระราม 9 กรุงเทพฯ",
-      phone: "02-333-4444",
+      version: "v2",
+      templateId: "apple-commerce",
+      business: {
+        name: "ConnectBridge Store",
+        tagline: "เน้นภาพสินค้าใหญ่แบบ Apple",
+        themeColor: "#0f172a",
+      },
+      hero: {
+        headline: "สินค้าใหม่ พร้อมส่งถึงคุณ",
+        subheadline: "ออกแบบสำหรับ SME ที่ขายผ่าน LINE เป็นหลัก",
+        ctaText: "รับโปรโมชันผ่าน LINE",
+        ctaUrl: "",
+        imageUrl: "",
+      },
+      products: [
+        {
+          id: "product-1",
+          name: "สินค้าพรีเมียม",
+          price: "1590",
+          imageUrl: "",
+          url: "",
+          shortDesc: "ของแท้พร้อมรับประกัน",
+          tags: ["premium"],
+        },
+        {
+          id: "product-2",
+          name: "สินค้าราคาพิเศษ",
+          price: "690",
+          imageUrl: "",
+          url: "",
+          shortDesc: "เฉพาะลูกค้า LINE",
+          tags: ["line-only"],
+        },
+      ],
+      sections: {
+        highlights: [
+          "สั่งผ่าน LINE ได้ทันที",
+          "รองรับชำระเงินหลายช่องทาง",
+          "ระบบติดตามการจัดส่งอัตโนมัติ",
+        ],
+        trust: [
+          "PDPA Toolkit ครบถ้วน",
+          "บันทึกประวัติการยินยอม",
+          "ปลอดภัยตามมาตรฐาน",
+        ],
+        gallery: [],
+      },
+      pdpa: {
+        showBanner: true,
+        policyVersion: "v1",
+      },
     },
   },
 ];
 
-function toLines(value: string) {
-  return value
+const createProduct = () => ({
+  id: `product-${Math.random().toString(36).slice(2, 8)}`,
+  name: "",
+  price: "",
+  imageUrl: "",
+  url: "",
+  shortDesc: "",
+  tags: [] as string[],
+});
+
+const toLines = (value: string) =>
+  value
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-}
 
-function toTextarea(lines?: string[]) {
-  return (lines || []).join("\n");
-}
+const toTextarea = (lines?: string[]) => (lines || []).join("\n");
+
+const toV2Config = (
+  input: SiteConfig,
+  storeName?: string,
+  fallbackTemplateId: SiteConfigV2["templateId"] = "apple-minimal"
+): SiteConfigV2 => {
+  if ((input as SiteConfigV2).version === "v2") {
+    return input as SiteConfigV2;
+  }
+
+  const legacy = input as any;
+  const businessName = legacy.businessName || storeName || "ConnectBridge Store";
+
+  return {
+    version: "v2",
+    templateId: fallbackTemplateId,
+    business: {
+      name: businessName,
+      tagline: legacy.tagline || "",
+      themeColor: legacy.themeColor || "#111827",
+      address: legacy.address || "",
+      phone: legacy.phone || "",
+    },
+    hero: {
+      headline: legacy.heroHeadline || `ยินดีต้อนรับสู่ ${businessName}`,
+      subheadline:
+        legacy.heroSubheadline ||
+        "เว็บไซต์หน้าร้านที่เชื่อมต่อกับ LINE OA ของคุณ",
+      ctaText: legacy.ctaText || "ติดต่อผ่าน LINE",
+      ctaUrl: legacy.ctaUrl || "",
+      imageUrl: legacy.heroImageUrl || "",
+    },
+    products: (legacy.offerings || []).map((item: string, idx: number) => ({
+      id: `legacy-${idx}`,
+      name: item,
+      price: "",
+      imageUrl: "",
+      url: "",
+      shortDesc: legacy.highlights?.[idx] || "",
+      tags: [],
+    })),
+    sections: {
+      highlights: legacy.highlights || [],
+      trust: [],
+      gallery: legacy.gallery || [],
+    },
+    pdpa: {
+      showBanner: true,
+      policyVersion: "v1",
+    },
+  };
+};
 
 export default function WebBuilder() {
   const navigate = useNavigate();
   const { store } = useStore();
   const storeId = store?.id || "";
 
-  const [activeCategory, setActiveCategory] = useState<
-    "restaurant" | "cafe" | "clinic"
-  >("restaurant");
   const [activeTemplateId, setActiveTemplateId] = useState(templates[0].id);
-  const [config, setConfig] = useState<SiteConfig>(templates[0].config);
+  const [config, setConfig] = useState<SiteConfigV2>(templates[0].config);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [lineOaUrl, setLineOaUrl] = useState<string>("");
+  const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
+  const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const heroFileInputRef = useRef<HTMLInputElement | null>(null);
+  const maxImageBytes = 1024 * 1024;
 
-  const filteredTemplates = useMemo(
-    () => templates.filter((t) => t.category === activeCategory),
-    [activeCategory]
+  const activeTemplate = useMemo(
+    () => templates.find((t) => t.id === activeTemplateId) || templates[0],
+    [activeTemplateId]
   );
 
-  const applyTemplate = (templateId: string) => {
+  const applyTemplate = (templateId: SiteConfigV2["templateId"]) => {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
     setActiveTemplateId(templateId);
     setConfig({
       ...template.config,
-      businessName: store?.name || template.config.businessName,
+      business: {
+        ...template.config.business,
+        name: store?.name || template.config.business.name,
+      },
     });
   };
 
@@ -136,11 +251,15 @@ export default function WebBuilder() {
       const oa = await getLineOaLink(storeId);
 
       if (draftConfig) {
-        setConfig(draftConfig);
-        setActiveCategory(draftConfig.category || "restaurant");
-        setActiveTemplateId(draftConfig.templateId || templates[0].id);
+        const v2 = toV2Config(
+          draftConfig,
+          store?.name,
+          activeTemplateId
+        );
+        setConfig(v2);
+        setActiveTemplateId(v2.templateId || templates[0].id);
       } else {
-        applyTemplate(filteredTemplates[0]?.id || templates[0].id);
+        applyTemplate(activeTemplateId);
       }
 
       if (published?.slug) {
@@ -151,7 +270,10 @@ export default function WebBuilder() {
         setLineOaUrl(oa.lineOaUrl);
         setConfig((prev) => ({
           ...prev,
-          ctaUrl: prev.ctaUrl || oa.lineOaUrl,
+          hero: {
+            ...prev.hero,
+            ctaUrl: prev.hero.ctaUrl || oa.lineOaUrl,
+          },
         }));
       }
     } catch (err: any) {
@@ -175,10 +297,7 @@ export default function WebBuilder() {
           storeId,
           config: {
             ...config,
-            category: config.category || activeCategory,
-            templateId: config.templateId || activeTemplateId,
-            highlights: config.highlights || [],
-            offerings: config.offerings || [],
+            templateId: activeTemplateId,
           },
         }),
       });
@@ -200,10 +319,7 @@ export default function WebBuilder() {
           storeId,
           config: {
             ...config,
-            category: config.category || activeCategory,
-            templateId: config.templateId || activeTemplateId,
-            highlights: config.highlights || [],
-            offerings: config.offerings || [],
+            templateId: activeTemplateId,
           },
         }),
       });
@@ -225,12 +341,211 @@ export default function WebBuilder() {
     }
   };
 
+  const updateBusiness = (key: keyof SiteConfigV2["business"], value: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      business: {
+        ...prev.business,
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateHero = (key: keyof SiteConfigV2["hero"], value: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateSections = (
+    key: keyof NonNullable<SiteConfigV2["sections"]>,
+    value: string
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      sections: {
+        ...prev.sections,
+        [key]: toLines(value),
+      },
+    }));
+  };
+
+  const updateProduct = (
+    index: number,
+    key: keyof SiteConfigV2["products"][number],
+    value: string
+  ) => {
+    setConfig((prev) => {
+      const next = [...prev.products];
+      next[index] = { ...next[index], [key]: value };
+      return { ...prev, products: next };
+    });
+  };
+
+  const addProduct = () => {
+    setConfig((prev) => ({
+      ...prev,
+      products: [...prev.products, createProduct()],
+    }));
+  };
+
+  const compressImageIfNeeded = async (file: File) => {
+    if (file.size <= maxImageBytes) return file;
+
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("อ่านรูปไม่สำเร็จ"));
+      img.src = URL.createObjectURL(file);
+    });
+
+    const canvas = document.createElement("canvas");
+    const maxDimension = 1400;
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    canvas.width = Math.round(image.width * scale);
+    canvas.height = Math.round(image.height * scale);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("สร้าง canvas ไม่สำเร็จ");
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(image.src);
+
+    let quality = 0.85;
+    let blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+
+    while (blob && blob.size > maxImageBytes && quality > 0.5) {
+      quality -= 0.1;
+      blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", quality)
+      );
+    }
+
+    if (!blob) throw new Error("แปลงรูปไม่สำเร็จ");
+    if (blob.size > maxImageBytes) {
+      throw new Error("ไฟล์ยังใหญ่เกิน 1MB หลังย่อ");
+    }
+
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+      type: "image/jpeg",
+    });
+  };
+
+  const fileToBase64 = async (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("Invalid file"));
+          return;
+        }
+        const base64 = result.split(",")[1] || "";
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("อ่านไฟล์ไม่สำเร็จ"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleProductImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const index = uploadingImageIndex;
+    event.target.value = "";
+
+    if (!file || index === null || !storeId) {
+      setUploadingImageIndex(null);
+      return;
+    }
+
+    try {
+      setUploadingImageIndex(index);
+      const processedFile = await compressImageIfNeeded(file);
+      const dataBase64 = await fileToBase64(processedFile);
+
+      const res: any = await uploadLineImage({
+        storeId,
+        fileName: processedFile.name,
+        contentType: processedFile.type || "image/jpeg",
+        dataBase64,
+      });
+      const url = res?.data?.url;
+      if (!url) throw new Error("ไม่พบ URL รูป");
+      updateProduct(index, "imageUrl", url);
+      toast.success("อัปโหลดรูปสำเร็จ");
+    } catch (err: any) {
+      toast.error(err?.message || "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setUploadingImageIndex(null);
+    }
+  };
+
+  const handleProductImagePick = (index: number) => {
+    setUploadingImageIndex(index);
+    fileInputRef.current?.click();
+  };
+
+  const handleHeroImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !storeId) {
+      setUploadingHeroImage(false);
+      return;
+    }
+
+    try {
+      setUploadingHeroImage(true);
+      const processedFile = await compressImageIfNeeded(file);
+      const dataBase64 = await fileToBase64(processedFile);
+      const res: any = await uploadLineImage({
+        storeId,
+        fileName: processedFile.name,
+        contentType: processedFile.type || "image/jpeg",
+        dataBase64,
+      });
+      const url = res?.data?.url;
+      if (!url) throw new Error("ไม่พบ URL รูป");
+      updateHero("imageUrl", url);
+      toast.success("อัปโหลด Hero สำเร็จ");
+    } catch (err: any) {
+      toast.error(err?.message || "อัปโหลด Hero ไม่สำเร็จ");
+    } finally {
+      setUploadingHeroImage(false);
+    }
+  };
+
+  const removeProduct = (index: number) => {
+    setConfig((prev) => ({
+      ...prev,
+      products: prev.products.filter((_, idx) => idx !== index),
+    }));
+  };
+
   if (!store) {
     return <div className="p-8 text-center">กรุณาเลือกร้านค้า</div>;
   }
 
   return (
     <div className="space-y-8">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleProductImageUpload}
+      />
+      <input
+        ref={heroFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleHeroImageUpload}
+      />
       <div className="rounded-3xl border bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white px-6 py-6 shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -262,264 +577,332 @@ export default function WebBuilder() {
             </Button>
           </div>
         </div>
+        {publishedUrl && (
+          <div className="mt-4 text-sm text-emerald-200">
+            เผยแพร่แล้ว: {publishedUrl}
+          </div>
+        )}
       </div>
 
-      {publishedUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Public URL</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <div className="text-sm text-gray-600 break-all">{publishedUrl}</div>
-            <Button
-              variant="outline"
-              onClick={() => window.open(publishedUrl, "_blank")}
-            >
-              เปิดหน้าเว็บไซต์
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>เลือกประเภทร้าน</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {(["restaurant", "cafe", "clinic"] as const).map((cat) => (
-                <Button
-                  key={cat}
-                  variant={activeCategory === cat ? "default" : "outline"}
-                  onClick={() => {
-                    setActiveCategory(cat);
-                    const first = templates.find((t) => t.category === cat);
-                    if (first) applyTemplate(first.id);
-                  }}
-                >
-                  {cat === "restaurant" ? "ร้านอาหาร" : cat === "cafe" ? "ร้านกาแฟ" : "คลินิก"}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
+          <Card className="rounded-3xl">
             <CardHeader>
               <CardTitle>เลือกเทมเพลต</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {filteredTemplates.map((template) => (
+              {templates.map((template) => (
                 <button
                   key={template.id}
+                  type="button"
                   onClick={() => applyTemplate(template.id)}
-                  className={`w-full text-left border rounded-xl p-3 transition ${
+                  className={`w-full text-left rounded-2xl border px-4 py-3 transition ${
                     activeTemplateId === template.id
                       ? "border-emerald-500 bg-emerald-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      : "border-gray-200 bg-white"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold text-gray-900">
-                      {template.name}
+                    <div>
+                      <div className="font-semibold text-gray-900">
+                        {template.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {template.description}
+                      </div>
                     </div>
                     {activeTemplateId === template.id && (
-                      <Badge className="bg-emerald-600">เลือกอยู่</Badge>
+                      <Badge className="bg-emerald-500">ใช้งานอยู่</Badge>
                     )}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {template.config.heroHeadline}
                   </div>
                 </button>
               ))}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle>ข้อมูลร้าน</CardTitle>
+              <CardTitle>ข้อมูลร้านค้า</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Hero Image URL</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  ชื่อร้าน
+                </label>
                 <Input
-                  value={config.heroImageUrl || ""}
-                  onChange={(e) =>
-                    setConfig({ ...config, heroImageUrl: e.target.value })
-                  }
-                  placeholder="https://..."
+                  value={config.business.name}
+                  onChange={(e) => updateBusiness("name", e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">Slug (ลิงก์เว็บไซต์)</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Tagline
+                </label>
                 <Input
-                  value={config.slug || ""}
-                  onChange={(e) => setConfig({ ...config, slug: e.target.value })}
-                  placeholder="เช่น mia-connect-cafe"
+                  value={config.business.tagline || ""}
+                  onChange={(e) => updateBusiness("tagline", e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">ชื่อร้าน</label>
-                <Input
-                  value={config.businessName || ""}
-                  onChange={(e) =>
-                    setConfig({ ...config, businessName: e.target.value })
-                  }
-                  placeholder="ชื่อร้านของคุณ"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Theme Color
+                  </label>
+                  <Input
+                    value={config.business.themeColor}
+                    onChange={(e) => updateBusiness("themeColor", e.target.value)}
+                    placeholder="#111827"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Logo URL
+                  </label>
+                  <Input
+                    value={config.business.logoUrl || ""}
+                    onChange={(e) => updateBusiness("logoUrl", e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium">Tagline</label>
-                <Input
-                  value={config.tagline || ""}
-                  onChange={(e) => setConfig({ ...config, tagline: e.target.value })}
-                  placeholder="คำโปรยสั้นๆ"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Headline</label>
-                <Textarea
-                  value={config.heroHeadline || ""}
-                  onChange={(e) =>
-                    setConfig({ ...config, heroHeadline: e.target.value })
-                  }
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Subheadline</label>
-                <Textarea
-                  value={config.heroSubheadline || ""}
-                  onChange={(e) =>
-                    setConfig({ ...config, heroSubheadline: e.target.value })
-                  }
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">สีธีม</label>
-                <Input
-                  type="color"
-                  value={config.themeColor || "#16a34a"}
-                  onChange={(e) => setConfig({ ...config, themeColor: e.target.value })}
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    ที่อยู่ร้าน
+                  </label>
+                  <Input
+                    value={config.business.address || ""}
+                    onChange={(e) => updateBusiness("address", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    เบอร์ติดต่อ
+                  </label>
+                  <Input
+                    value={config.business.phone || ""}
+                    onChange={(e) => updateBusiness("phone", e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle>ปุ่ม CTA / LINE OA</CardTitle>
+              <CardTitle>Hero Section</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">ข้อความบนปุ่ม</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Headline
+                </label>
                 <Input
-                  value={config.ctaText || ""}
-                  onChange={(e) => setConfig({ ...config, ctaText: e.target.value })}
-                  placeholder="เช่น แอด LINE"
+                  value={config.hero.headline}
+                  onChange={(e) => updateHero("headline", e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">ลิงก์ LINE OA</label>
-                <Input
-                  value={config.ctaUrl || ""}
-                  onChange={(e) => setConfig({ ...config, ctaUrl: e.target.value })}
-                  placeholder="https://line.me/R/ti/p/@your-oa"
-                />
-              </div>
-              <div className="text-xs text-gray-500">
-                {lineOaUrl
-                  ? `ระบบดึงลิงก์ LINE OA ให้อัตโนมัติแล้ว: ${lineOaUrl}`
-                  : "หากยังไม่มีลิงก์ LINE OA ให้เชื่อมต่อก่อน แล้วค่อยเติมลิงก์"}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>จุดเด่น & เมนู</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">จุดเด่น (ขึ้นบรรทัดใหม่ต่อรายการ)</label>
-                <Textarea
-                  value={toTextarea(config.highlights)}
-                  onChange={(e) =>
-                    setConfig({ ...config, highlights: toLines(e.target.value) })
-                  }
-                  rows={4}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">
-                  {activeCategory === "clinic" ? "บริการเด่น" : "เมนูแนะนำ"} (ขึ้นบรรทัดใหม่ต่อรายการ)
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Subheadline
                 </label>
                 <Textarea
-                  value={toTextarea(config.offerings)}
-                  onChange={(e) =>
-                    setConfig({ ...config, offerings: toLines(e.target.value) })
-                  }
-                  rows={4}
+                  value={config.hero.subheadline}
+                  onChange={(e) => updateHero("subheadline", e.target.value)}
                 />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    CTA Text
+                  </label>
+                  <Input
+                    value={config.hero.ctaText}
+                    onChange={(e) => updateHero("ctaText", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    CTA URL
+                  </label>
+                  <Input
+                    value={config.hero.ctaUrl || lineOaUrl}
+                    onChange={(e) => updateHero("ctaUrl", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Hero Image URL
+                </label>
+                <Input
+                  value={config.hero.imageUrl || ""}
+                  onChange={(e) => updateHero("imageUrl", e.target.value)}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => heroFileInputRef.current?.click()}
+                    disabled={uploadingHeroImage}
+                  >
+                    {uploadingHeroImage ? "กำลังอัปโหลด..." : "อัปโหลดจากเครื่อง"}
+                  </Button>
+                  <span className="text-[11px] text-gray-400">
+                    ไฟล์จะถูกย่อให้ต่ำกว่า 1MB
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle>Gallery (ใส่รูปหลายรูป)</CardTitle>
+              <CardTitle>สินค้า</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">
-                  ใส่ URL รูป (ขึ้นบรรทัดใหม่ต่อรูป)
+              {config.products.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="rounded-2xl border border-gray-200 p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-gray-700">
+                      สินค้า #{index + 1}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeProduct(index)}
+                      className="text-xs text-red-500"
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-gray-500">ชื่อสินค้า</label>
+                    <Input
+                      value={product.name}
+                      onChange={(e) =>
+                        updateProduct(index, "name", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500">ราคา</label>
+                      <Input
+                        value={product.price || ""}
+                        onChange={(e) =>
+                          updateProduct(index, "price", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500">ลิงก์สินค้า</label>
+                      <Input
+                        value={product.url || ""}
+                        onChange={(e) =>
+                          updateProduct(index, "url", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500">รูปสินค้า</label>
+                      <Input
+                        value={product.imageUrl || ""}
+                        onChange={(e) =>
+                          updateProduct(index, "imageUrl", e.target.value)
+                        }
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleProductImagePick(index)}
+                          disabled={uploadingImageIndex === index}
+                        >
+                          {uploadingImageIndex === index ? "กำลังอัปโหลด..." : "แนบรูปจากเครื่อง"}
+                        </Button>
+                        <span className="text-[11px] text-gray-400">ไฟล์จะถูกย่อให้ต่ำกว่า 1MB</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500">คำอธิบายสั้น</label>
+                      <Input
+                        value={product.shortDesc || ""}
+                        onChange={(e) =>
+                          updateProduct(index, "shortDesc", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" onClick={addProduct}>
+                เพิ่มสินค้า
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle>Trust / PDPA / Highlights</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Highlights (ขึ้นบรรทัดใหม่)
                 </label>
                 <Textarea
-                  value={(config.gallery || []).join("\n")}
-                  onChange={(e) =>
-                    setConfig({ ...config, gallery: toLines(e.target.value) })
-                  }
-                  rows={4}
+                  value={toTextarea(config.sections?.highlights)}
+                  onChange={(e) => updateSections("highlights", e.target.value)}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>ติดต่อร้าน</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">ที่อยู่</label>
-                <Input
-                  value={config.address || ""}
-                  onChange={(e) => setConfig({ ...config, address: e.target.value })}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Trust / PDPA (ขึ้นบรรทัดใหม่)
+                </label>
+                <Textarea
+                  value={toTextarea(config.sections?.trust)}
+                  onChange={(e) => updateSections("trust", e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium">เบอร์ติดต่อ</label>
-                <Input
-                  value={config.phone || ""}
-                  onChange={(e) => setConfig({ ...config, phone: e.target.value })}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Gallery URLs (ขึ้นบรรทัดใหม่)
+                </label>
+                <Textarea
+                  value={toTextarea(config.sections?.gallery)}
+                  onChange={(e) => updateSections("gallery", e.target.value)}
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-6 h-fit">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Live Preview</h2>
-            <Button variant="outline" onClick={loadConfig} disabled={loading}>
-              รีเฟรชข้อมูล
-            </Button>
-          </div>
-          <SitePreview
-            config={{ ...config, category: activeCategory }}
-            businessNameFallback={store.name}
-          />
+        <div className="space-y-6">
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle>Preview (Mobile-first)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SitePreview config={config} businessNameFallback={store.name} renderMode="builder" />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle>สถานะการเชื่อมต่อ LINE</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-gray-600">
+              <div>LINE OA URL: {lineOaUrl || "ยังไม่พบ"}</div>
+              <div>เทมเพลต: {activeTemplate.name}</div>
+              <div>สถานะ: {loading ? "กำลังโหลด" : "พร้อมใช้งาน"}</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

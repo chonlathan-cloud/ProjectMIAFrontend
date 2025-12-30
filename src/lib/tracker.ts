@@ -18,7 +18,17 @@ export const getSessionId = () => {
   return sessionId;
 };
 
-export const trackEvent = async (storeId: string, eventType: string, meta: any = {}) => {
+type TrackOptions = {
+  eventName?: string;
+  productId?: string;
+};
+
+export const trackEvent = async (
+  storeId: string,
+  eventType: string,
+  meta: Record<string, any> = {},
+  options: TrackOptions = {}
+) => {
   const sessionId = getSessionId();
   const lineUserId = localStorage.getItem("cb_line_user_id"); // จะมีค่าเมื่อ Login แล้ว
 
@@ -27,9 +37,10 @@ export const trackEvent = async (storeId: string, eventType: string, meta: any =
     sessionId,
     lineUserId,
     eventType,
-    eventName: eventType,
+    eventName: options.eventName || eventType,
     url: window.location.href,
     page: window.location.pathname,
+    productId: options.productId || null,
     meta,
     ts: new Date().toISOString(),
   };

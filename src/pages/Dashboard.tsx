@@ -1,5 +1,5 @@
 // src/pages/Dashboard.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { authedJson, getStoreStats, listStores } from "@/lib/api";
 import type { SiteConfig } from "@/components/site/SitePreview";
+import { toast } from "sonner";
 
 type SitesResponse = {
   success: boolean;
@@ -32,6 +33,8 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { user, store, setStore } = useStore();
   const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState<{ ok: boolean; message: string } | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // ---------------------------------------------------------------------------
   // LOAD STORE
@@ -79,6 +82,31 @@ export function Dashboard() {
 
     loadStore();
   }, [user, store?.id, setStore]);
+
+  useEffect(() => {
+    const resolveHealthEndpoint = () => {
+      const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+      if (!base) return "/health";
+      if (base.endsWith("/api")) return `${base.slice(0, -4)}/health`;
+      return `${base}/health`;
+    };
+
+    const fetchHealth = async () => {
+      try {
+        setHealthLoading(true);
+        const res = await fetch(resolveHealthEndpoint());
+        const data = await res.json();
+        setHealth({ ok: !!data?.success, message: data?.message || "ok" });
+      } catch (err) {
+        console.error("Health check failed", err);
+        setHealth({ ok: false, message: "offline" });
+      } finally {
+        setHealthLoading(false);
+      }
+    };
+
+    fetchHealth();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // LOADING STATE
@@ -157,6 +185,8 @@ export function Dashboard() {
     <DashboardMainUI
       storeId={store.id}
       storeName={store.name || "ร้านของฉัน"}
+      health={health}
+      healthLoading={healthLoading}
     />
   );
 }
@@ -164,13 +194,24 @@ export function Dashboard() {
 // ============================================================================
 // MAIN DASHBOARD UI (Fetching Real Stats)
 // ============================================================================
-function DashboardMainUI({ storeId, storeName }: { storeId: string; storeName: string }) {
+function DashboardMainUI({
+  storeId,
+  storeName,
+  health,
+  healthLoading,
+}: {
+  storeId: string;
+  storeName: string;
+  health: { ok: boolean; message: string } | null;
+  healthLoading: boolean;
+}) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ customers: 0, messages: 0 });
   const [loadingStats, setLoadingStats] = useState(false);
   const [siteInfo, setSiteInfo] = useState<SitesResponse | null>(null);
   const [siteAnalytics, setSiteAnalytics] = useState<AnalyticsResponse | null>(null);
   const [loadingSite, setLoadingSite] = useState(false);
+  const lastRefreshRef = useRef<number>(0);
 
   const getBusinessName = (config?: SiteConfig) => {
     if (!config) return undefined;
@@ -239,8 +280,40 @@ function DashboardMainUI({ storeId, storeName }: { storeId: string; storeName: s
     refreshAll();
   }, [storeId]);
 
+  useEffect(() => {
+    const maybeRefresh = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefreshRef.current < 2000) return;
+      lastRefreshRef.current = now;
+      refreshAll();
+    };
+
+    window.addEventListener("focus", maybeRefresh);
+    document.addEventListener("visibilitychange", maybeRefresh);
+    return () => {
+      window.removeEventListener("focus", maybeRefresh);
+      document.removeEventListener("visibilitychange", maybeRefresh);
+    };
+  }, [storeId]);
+
   const configForStatus =
     siteInfo?.published?.config || siteInfo?.draft?.config || undefined;
+  const publicUrl = useMemo(() => {
+    const slug = siteInfo?.published?.slug;
+    if (!slug) return "";
+    return `${window.location.origin}/public/${slug}`;
+  }, [siteInfo?.published?.slug]);
+  const copyText = async (label: string, value: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`คัดลอก ${label} แล้ว`);
+    } catch (error) {
+      console.error("copy failed", error);
+      toast.error("คัดลอกไม่สำเร็จ");
+    }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -256,10 +329,12 @@ function DashboardMainUI({ storeId, storeName }: { storeId: string; storeName: s
         <Card className="p-6 bg-blue-50 border-blue-100 flex flex-col justify-center">
           <div className="flex justify-between items-start">
             <h3 className="font-semibold text-blue-700">สถานะระบบ</h3>
-            <Badge className="bg-green-500 hover:bg-green-600">Online</Badge>
+            <Badge className={health?.ok ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}>
+              {healthLoading ? "Checking..." : health?.ok ? "Online" : "Offline"}
+            </Badge>
           </div>
           <p className="text-sm text-blue-600/80 mt-2">
-            เชื่อมต่อกับ LINE OA เรียบร้อยพร้อมทำงาน
+            {health?.ok ? "เชื่อมต่อกับเซิร์ฟเวอร์เรียบร้อย" : "ยังเชื่อมต่อเซิร์ฟเวอร์ไม่ได้"}
           </p>
         </Card>
 
@@ -303,6 +378,30 @@ function DashboardMainUI({ storeId, storeName }: { storeId: string; storeName: s
           <div className="mt-4 flex flex-wrap gap-2">
             <Button size="sm" onClick={() => navigate("/web-builder")}>เปิด Builder</Button>
             <Button size="sm" variant="outline" onClick={() => navigate("/website")}>ดูสรุป</Button>
+          </div>
+          <div className="mt-4 space-y-2 text-xs text-gray-500">
+            <p className="font-semibold text-gray-700">ลิงก์เว็บไซต์สำหรับส่งลูกค้า</p>
+            {publicUrl ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="truncate max-w-[260px]">{publicUrl}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyText("ลิงก์เว็บไซต์", publicUrl)}
+                >
+                  คัดลอก
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => window.open(publicUrl, "_blank")}
+                >
+                  เปิด
+                </Button>
+              </div>
+            ) : (
+              <p>ยังไม่มีลิงก์ (ต้องเผยแพร่เว็บไซต์ก่อน)</p>
+            )}
           </div>
         </Card>
 

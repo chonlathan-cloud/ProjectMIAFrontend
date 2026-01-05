@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
-import { Phone, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Phone, MapPin, ShieldCheck } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
+import { Button } from "@/components/ui/button";
 
 export type SiteConfigV1 = {
   category?: "restaurant" | "cafe" | "clinic";
@@ -200,6 +201,34 @@ export default function SitePreview({
 }: SitePreviewProps) {
   const normalized = normalizeConfig(config, businessNameFallback);
   const accent = normalized.business.themeColor || "#111827";
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkout, setCheckout] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    note: "",
+  });
+  const [cartItems, setCartItems] = useState<
+    Array<{
+      id: string;
+      name: string;
+      price: number;
+      qty: number;
+      imageUrl?: string;
+    }>
+  >([]);
+
+  const parsePrice = (value?: string) => {
+    if (!value) return 0;
+    const normalizedPrice = Number(String(value).replace(/[,฿\s]/g, ""));
+    return Number.isFinite(normalizedPrice) ? normalizedPrice : 0;
+  };
+
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.price * item.qty, 0),
+    [cartItems]
+  );
 
   const handleCtaClick = () => {
     if (!enableTracking || !storeId) return;
@@ -209,6 +238,75 @@ export default function SitePreview({
       { ctaText: normalized.hero.ctaText, ctaUrl: normalized.hero.ctaUrl },
       { eventName: "cta_click" }
     );
+  };
+
+  const handleAddToCart = (product: SiteConfigV2["products"][number]) => {
+    const price = parsePrice(product.price);
+    if (!price) return;
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          price,
+          qty: 1,
+          imageUrl: product.imageUrl,
+        },
+      ];
+    });
+    if (enableTracking && storeId) {
+      trackEvent(
+        storeId,
+        "add_to_cart",
+        { productName: product.name, price, quantity: 1 },
+        { eventName: "add_to_cart", productId: product.id }
+      );
+    }
+    setCartOpen(true);
+  };
+
+  const updateQty = (id: string, nextQty: number) => {
+    setCartItems((prev) =>
+      prev
+        .map((item) =>
+          item.id === id ? { ...item, qty: Math.max(1, nextQty) } : item
+        )
+        .filter((item) => item.qty > 0)
+    );
+  };
+
+  const removeItem = (id: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleStartCheckout = () => {
+    setCheckoutOpen(true);
+    if (enableTracking && storeId) {
+      trackEvent(storeId, "checkout_start", { total: cartTotal });
+    }
+  };
+
+  const handleCheckoutSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (enableTracking && storeId) {
+      trackEvent(storeId, "checkout_submit", {
+        total: cartTotal,
+        items: cartItems.map((item) => ({
+          id: item.id,
+          name: item.name,
+          qty: item.qty,
+          price: item.price,
+        })),
+        customer: checkout,
+      });
+    }
   };
 
   const handleProductClick = (product: SiteConfigV2["products"][number]) => {
@@ -280,47 +378,49 @@ export default function SitePreview({
         {normalized.products.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {normalized.products.map((product) => (
-              <button
+              <div
                 key={product.id}
-                type="button"
-                onClick={() => handleProductClick(product)}
                 className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col text-left"
               >
-                <div className="h-24 bg-gray-100 rounded-xl mb-2 w-full overflow-hidden">
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                      ใส่รูปสินค้า
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-gray-800">
-                    {product.name}
-                  </h3>
-                  {product.shortDesc && (
-                    <p className="text-xs text-gray-400 line-clamp-2">
-                      {product.shortDesc}
-                    </p>
-                  )}
-                </div>
+                <button type="button" onClick={() => handleProductClick(product)}>
+                  <div className="h-24 bg-gray-100 rounded-xl mb-2 w-full overflow-hidden">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                        ใส่รูปสินค้า
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      {product.name}
+                    </h3>
+                    {product.shortDesc && (
+                      <p className="text-xs text-gray-400 line-clamp-2">
+                        {product.shortDesc}
+                      </p>
+                    )}
+                  </div>
+                </button>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-bold text-gray-900">
                     {product.price ? `฿${product.price}` : "สอบถามราคา"}
                   </span>
-                  <span
-                    className="p-1.5 bg-gray-50 rounded-full"
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(product)}
+                    className="px-2 py-1 text-[11px] font-semibold rounded-full bg-gray-100"
                     style={{ color: accent }}
                   >
-                    <ShoppingBag size={14} />
-                  </span>
+                    เพิ่มลงตะกร้า
+                  </button>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -368,6 +468,183 @@ export default function SitePreview({
           Powered by ConnectBridge
         </div>
       </div>
+
+      {renderMode === "public" && (
+        <>
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="fixed bottom-6 right-6 rounded-full shadow-lg px-4 py-3 text-sm font-semibold text-white"
+            style={{ backgroundColor: accent }}
+          >
+            ตะกร้า ({cartItems.reduce((sum, item) => sum + item.qty, 0)})
+          </button>
+
+          {cartOpen && (
+            <div className="fixed inset-0 z-40 flex items-end justify-center">
+              <div
+                className="absolute inset-0 bg-black/30"
+                onClick={() => setCartOpen(false)}
+              />
+              <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">ตะกร้าสินค้า</h3>
+                  <button
+                    type="button"
+                    className="text-sm text-gray-500"
+                    onClick={() => setCartOpen(false)}
+                  >
+                    ปิด
+                  </button>
+                </div>
+
+                {cartItems.length === 0 ? (
+                  <div className="mt-4 text-sm text-gray-500">
+                    ยังไม่มีสินค้าในตะกร้า
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {cartItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-xl border border-gray-100 p-3"
+                      >
+                        <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {item.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ฿{item.price.toLocaleString()}
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="h-6 w-6 rounded-full border text-sm"
+                              onClick={() => updateQty(item.id, item.qty - 1)}
+                            >
+                              -
+                            </button>
+                            <span className="text-sm">{item.qty}</span>
+                            <button
+                              type="button"
+                              className="h-6 w-6 rounded-full border text-sm"
+                              onClick={() => updateQty(item.id, item.qty + 1)}
+                            >
+                              +
+                            </button>
+                            <button
+                              type="button"
+                              className="ml-auto text-xs text-red-500"
+                              onClick={() => removeItem(item.id)}
+                            >
+                              ลบ
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-sm font-semibold">
+                      <span>รวมทั้งหมด</span>
+                      <span>฿{cartTotal.toLocaleString()}</span>
+                    </div>
+                    <Button
+                      className="w-full mt-2"
+                      onClick={handleStartCheckout}
+                    >
+                      ไปที่เช็คเอาต์
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {checkoutOpen && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center">
+              <div
+                className="absolute inset-0 bg-black/30"
+                onClick={() => setCheckoutOpen(false)}
+              />
+              <form
+                className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3"
+                onSubmit={handleCheckoutSubmit}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">เช็คเอาต์</h3>
+                  <button
+                    type="button"
+                    className="text-sm text-gray-500"
+                    onClick={() => setCheckoutOpen(false)}
+                  >
+                    ปิด
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-500">ชื่อผู้สั่งซื้อ</label>
+                  <input
+                    className="w-full rounded-xl border px-3 py-2 text-sm"
+                    value={checkout.name}
+                    onChange={(e) =>
+                      setCheckout((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-500">เบอร์โทร</label>
+                  <input
+                    className="w-full rounded-xl border px-3 py-2 text-sm"
+                    value={checkout.phone}
+                    onChange={(e) =>
+                      setCheckout((prev) => ({ ...prev, phone: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-500">ที่อยู่จัดส่ง</label>
+                  <textarea
+                    className="w-full rounded-xl border px-3 py-2 text-sm"
+                    rows={3}
+                    value={checkout.address}
+                    onChange={(e) =>
+                      setCheckout((prev) => ({ ...prev, address: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-500">หมายเหตุ</label>
+                  <textarea
+                    className="w-full rounded-xl border px-3 py-2 text-sm"
+                    rows={2}
+                    value={checkout.note}
+                    onChange={(e) =>
+                      setCheckout((prev) => ({ ...prev, note: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span>ยอดรวม</span>
+                  <span>฿{cartTotal.toLocaleString()}</span>
+                </div>
+                <Button type="submit" className="w-full">
+                  ส่งคำสั่งซื้อ
+                </Button>
+              </form>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 

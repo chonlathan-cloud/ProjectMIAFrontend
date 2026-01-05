@@ -65,7 +65,7 @@ export function LineCallback() {
           {status === 'error' && <AlertCircle className="w-12 h-12 text-red-500" />}
           <p className="text-center text-base">{message}</p>
           {status === 'error' && (
-            <Button onClick={() => navigate('/line-setup')}>กลับไปหน้าเชื่อมต่อ</Button>
+            <Button onClick={() => navigate('/settings/store')}>กลับไปหน้าเชื่อมต่อ</Button>
           )}
         </CardContent>
       </Card>

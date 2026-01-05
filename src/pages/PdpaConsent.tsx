@@ -16,18 +16,20 @@ export default function PdpaConsent() {
     const value = params.get('returnUrl');
     return value ? decodeURIComponent(value) : '';
   }, []);
+  const fallbackReturnUrl = storeId ? `/public/${storeId}` : '';
+  const effectiveReturnUrl = returnUrl || fallbackReturnUrl;
 
   const lineUserId = useMemo(() => {
     return localStorage.getItem('cb_line_user_id');
   }, []);
 
   useEffect(() => {
-    if (status !== 'done' || !returnUrl) return;
+    if (status !== 'done' || !effectiveReturnUrl) return;
     const timer = window.setTimeout(() => {
-      window.location.replace(returnUrl);
+      window.location.replace(effectiveReturnUrl);
     }, 1200);
     return () => window.clearTimeout(timer);
-  }, [status, returnUrl]);
+  }, [status, effectiveReturnUrl]);
 
   const submitConsent = async (consented: boolean) => {
     if (!storeId || !lineUserId) {
@@ -56,6 +58,10 @@ export default function PdpaConsent() {
 
       if (!res.ok) throw new Error('consent_failed');
 
+      if (consented) {
+        const key = `cb_pdpa_accepted_${storeId}`;
+        localStorage.setItem(key, 'true');
+      }
       setStatus('done');
       setMessage(consented ? 'ขอบคุณสำหรับการยินยอม' : 'บันทึกการปฏิเสธเรียบร้อย');
     } catch (error) {
@@ -142,10 +148,10 @@ export default function PdpaConsent() {
             </div>
 
             <div className="space-y-2 text-xs text-emerald-100">
-              {returnUrl && status === 'done' && (
+              {effectiveReturnUrl && status === 'done' && (
                 <a
                   className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-white/40 text-white"
-                  href={returnUrl}
+                  href={effectiveReturnUrl}
                 >
                   กลับไปหน้าเว็บ
                 </a>

@@ -3,17 +3,24 @@ import { Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { getAiSettings, updateAiSettings } from '@/lib/api';
+import { getAuth, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { toast } from 'sonner';
 
 export function Settings() {
-  const { user, store } = useStore();
+  const { user, store, setUser } = useStore();
   const navigate = useNavigate();
   const [aiEnabled, setAiEnabled] = useState<boolean>(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (!store?.id) return;
@@ -31,6 +38,10 @@ export function Settings() {
     load();
   }, [store?.id]);
 
+  useEffect(() => {
+    setDisplayName(user?.name || '');
+  }, [user?.name]);
+
   const handleToggleAi = async (next: boolean) => {
     if (!store?.id) return;
     setAiLoading(true);
@@ -44,6 +55,51 @@ export function Settings() {
       setAiEnabled(!next);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!displayName.trim()) {
+      toast.error('กรุณากรอกชื่อที่ต้องการแสดง');
+      return;
+    }
+
+    try {
+      setSavingProfile(true);
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast.error('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
+        return;
+      }
+
+      await updateProfile(currentUser, { displayName: displayName.trim() });
+      if (user) {
+        setUser({ ...user, name: displayName.trim() });
+      }
+      toast.success('อัปเดตข้อมูลสำเร็จ');
+      setProfileOpen(false);
+    } catch (err: any) {
+      console.error('update profile failed:', err);
+      toast.error(err?.message || 'อัปเดตข้อมูลไม่สำเร็จ');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      toast.error('ไม่พบอีเมลผู้ใช้งาน');
+      return;
+    }
+
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, user.email);
+      toast.success('ส่งอีเมลสำหรับเปลี่ยนรหัสผ่านแล้ว');
+    } catch (err: any) {
+      console.error('send reset email failed:', err);
+      toast.error(err?.message || 'ส่งอีเมลไม่สำเร็จ');
     }
   };
 
@@ -127,12 +183,39 @@ export function Settings() {
           </div>
 
           <div className="pt-4 flex gap-3">
-            <Button variant="outline">แก้ไขข้อมูล</Button>
-            <Button variant="outline">เปลี่ยนรหัสผ่าน</Button>
+            <Button variant="outline" onClick={() => setProfileOpen(true)}>
+              แก้ไขข้อมูล
+            </Button>
+            <Button variant="outline" onClick={handleResetPassword}>
+              เปลี่ยนรหัสผ่าน
+            </Button>
           </div>
         </CardContent>
       </Card>
 
+      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>แก้ไขข้อมูลบัญชี</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm text-gray-500">ชื่อที่แสดง</label>
+            <Input
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="เช่น Mia-Connect Team"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleSaveProfile} disabled={savingProfile}>
+              {savingProfile ? 'กำลังบันทึก...' : 'บันทึก'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -164,7 +164,6 @@ File Path: /Users/tadapongsrilasak/clone/LineBoost/README.md
 - `src/pages/Analytics.tsx` placeholder สำหรับ analytics จริงจาก backend
 - `src/pages/Customers.tsx` placeholder สำหรับรายชื่อลูกค้า
 - `src/pages/Inbox.tsx` Inbox/Chat ดึงจาก API
-- `src/pages/ABTest.tsx` UI A/B Test (mock data)
 - `src/pages/Settings.tsx` เลือกแพ็คเกจ + ลิงก์หน้า Store Integration
 - `src/pages/settings/StoreIntegration.tsx` ฟอร์มเชื่อม LINE OA ต่อ store แบบใหม่
 - `src/pages/LineCallback.tsx` callback จาก LINE OAuth และเซ็ต lineOA state

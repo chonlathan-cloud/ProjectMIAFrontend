@@ -23,17 +23,59 @@ import { useStore } from '@/store/useStore';
  * ```
  */
 export function ConnectBridge() {
-  const { user } = useStore();
+  const { user, store } = useStore();
   const [domain, setDomain] = useState('');
   const [scriptTag, setScriptTag] = useState('');
 
   useEffect(() => {
-    if (user?.id) {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
-      const src = `${baseUrl}/api/connectbridge/script.js?uid=${user.id}`;
-      setScriptTag(`<script src="${src}" defer></script>`);
+    if (!user?.id && !store?.id) return;
+
+    const rawBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+    const apiBase = rawBase
+      ? rawBase.endsWith('/api')
+        ? rawBase
+        : `${rawBase}/api`
+      : '/api';
+    const params = new URLSearchParams();
+    if (store?.id) params.set('storeId', store.id);
+    if (user?.id) params.set('uid', user.id);
+    const src = `${apiBase}/connectbridge/script.js?${params.toString()}`;
+    setScriptTag(`<script src="${src}" defer></script>`);
+  }, [user?.id, store?.id]);
+
+  const resolveEventEndpoint = () => {
+    const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+    if (!base) return '/api/sites/event';
+    if (base.endsWith('/api')) return `${base}/sites/event`;
+    return `${base}/api/sites/event`;
+  };
+
+  const handleTest = async () => {
+    if (!store?.id) {
+      toast.error('กรุณาเลือกร้านก่อนทดสอบ');
+      return;
     }
-  }, [user]);
+
+    try {
+      const endpoint = resolveEventEndpoint();
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: store.id,
+          eventType: 'connectbridge_test',
+          eventName: 'connectbridge_test',
+          url: domain || window.location.href,
+          page: domain || window.location.pathname,
+          meta: { domain: domain || null },
+        }),
+      });
+      if (!res.ok) throw new Error('ส่ง event ไม่สำเร็จ');
+      toast.success('ส่ง event ทดสอบแล้ว ตรวจสอบใน Firestore/Inbox');
+    } catch (error: any) {
+      toast.error(error?.message || 'ทดสอบไม่สำเร็จ');
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -118,11 +160,8 @@ connectBridge.sendEvent('product_view', {
             />
           </div>
           <Button
-            disabled={!domain}
-            onClick={() => {
-              if (!domain) return;
-              toast.info(`กรุณาฝังสคริปต์และใช้ connectBridge.sendEvent ที่ ${domain} แล้วตรวจสอบผลลัพธ์ใน LINE`);
-            }}
+            disabled={!domain || !store?.id}
+            onClick={handleTest}
             className="bg-line hover:bg-line-dark"
           >
             ทดสอบการเชื่อมต่อ

@@ -106,7 +106,7 @@ export async function createLineConnect(params?: {
 }
 
 export async function completeLineCallback(code: string, state: string) {
-  return authedJson(`/line/callback?code=${code}&state=${state}`);
+  return authedJson(`/callback?code=${code}&state=${state}`);
 }
 
 export type LineStatusResponse = {
@@ -187,6 +187,13 @@ export async function createStore(name: string) {
   });
 }
 
+export async function resetStore(storeId: string) {
+  return authedJson(`/stores/${storeId}/reset`, {
+    method: "POST",
+    body: JSON.stringify({ confirm: "RESET" }),
+  });
+}
+
 export async function getLineCredentials(storeId: string) {
   return authedJson(`/stores/${storeId}/line-credentials`);
 }
@@ -234,6 +241,41 @@ export async function updateAiSettings(storeId: string, aiEnable: boolean) {
     method: "POST",
     body: JSON.stringify({ aiEnable }),
   });
+}
+
+// --------------------------------------------------
+// ANALYTICS
+// --------------------------------------------------
+export type AnalyticsSummary = {
+  totalMessages: number;
+  totalBroadcasts: number;
+  avgClickRate: string;
+};
+
+export type AnalyticsData = {
+  period: number;
+  dailyMessages: Record<string, { received: number; sent: number }>;
+  eventTypeStats: { eventType: string; count: number }[];
+  broadcastStats: {
+    id: string;
+    sentAt: string | null;
+    sentCount: number;
+    clickCount: number;
+    clickRate: string;
+  }[];
+  followerTrend: Record<string, number>;
+  summary: AnalyticsSummary;
+};
+
+export type AnalyticsResponse = {
+  success: boolean;
+  message: string;
+  data: AnalyticsData;
+};
+
+export async function getAnalytics(storeId: string, period = 30): Promise<AnalyticsResponse> {
+  const query = `?storeId=${encodeURIComponent(storeId)}&period=${encodeURIComponent(String(period))}`;
+  return authedJson(`/analytics${query}`);
 }
 
 // --------------------------------------------------

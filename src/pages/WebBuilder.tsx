@@ -215,14 +215,13 @@ export default function WebBuilder() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [lineOaUrl, setLineOaUrl] = useState<string>("");
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const heroFileInputRef = useRef<HTMLInputElement | null>(null);
   const maxImageBytes = 1024 * 1024;
-
   const activeTemplate = useMemo(
     () => templates.find((t) => t.id === activeTemplateId) || templates[0],
     [activeTemplateId]
@@ -262,10 +261,6 @@ export default function WebBuilder() {
         applyTemplate(activeTemplateId);
       }
 
-      if (published?.slug) {
-        setPublishedUrl(`${window.location.origin}/public/${published.slug}`);
-      }
-
       if (oa?.lineOaUrl) {
         setLineOaUrl(oa.lineOaUrl);
         setConfig((prev) => ({
@@ -275,6 +270,10 @@ export default function WebBuilder() {
             ctaUrl: prev.hero.ctaUrl || oa.lineOaUrl,
           },
         }));
+      }
+
+      if (published?.slug) {
+        setPublishedUrl(`${window.location.origin}/public/${published.slug}`);
       }
     } catch (err: any) {
       toast.error(err?.message || "โหลดข้อมูลเว็บไซต์ไม่สำเร็จ");
@@ -334,6 +333,7 @@ export default function WebBuilder() {
       }
 
       toast.success("เผยแพร่เว็บไซต์แล้ว");
+      await loadConfig();
     } catch (err: any) {
       toast.error(err?.message || "เผยแพร่ไม่สำเร็จ");
     } finally {
@@ -359,6 +359,17 @@ export default function WebBuilder() {
         [key]: value,
       },
     }));
+  };
+
+  const copyText = async (label: string, value: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`คัดลอก ${label} แล้ว`);
+    } catch (error) {
+      console.error("copy failed", error);
+      toast.error("คัดลอกไม่สำเร็จ");
+    }
   };
 
   const updateSections = (
@@ -578,8 +589,25 @@ export default function WebBuilder() {
           </div>
         </div>
         {publishedUrl && (
-          <div className="mt-4 text-sm text-emerald-200">
-            เผยแพร่แล้ว: {publishedUrl}
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-emerald-200">
+            <span className="font-semibold text-emerald-100">Public URL:</span>
+            <span className="truncate max-w-[520px]">{publishedUrl}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-emerald-200 text-emerald-900 bg-emerald-100 hover:bg-emerald-50"
+              onClick={() => copyText("ลิงก์เว็บไซต์", publishedUrl)}
+            >
+              คัดลอก
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-emerald-100 hover:text-white"
+              onClick={() => window.open(publishedUrl, "_blank")}
+            >
+              เปิด
+            </Button>
           </div>
         )}
       </div>

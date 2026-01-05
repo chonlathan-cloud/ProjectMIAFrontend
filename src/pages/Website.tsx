@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { useNavigate } from "react-router-dom";
 import { authedJson } from "@/lib/api";
 import type { SiteConfig } from "@/components/site/SitePreview";
+import { toast } from "sonner";
 
 type SitesResponse = {
   success: boolean;
@@ -35,12 +36,34 @@ export default function Website() {
   // storeId จริงของร้าน
   const storeId = store?.id || import.meta.env.VITE_STORE_ID || "";
 
-  const builderUrl = `${window.location.origin}/web-builder`;
-
   const getBusinessName = (config?: SiteConfig) => {
     if (!config) return undefined;
     const anyConfig: any = config;
     return anyConfig.business?.name || anyConfig.businessName;
+  };
+
+  const publicUrl = useMemo(() => {
+    const slug = sites?.published?.slug;
+    if (!slug) return "";
+    return `${window.location.origin}/public/${slug}`;
+  }, [sites?.published?.slug]);
+
+  const liffUrl = useMemo(() => {
+    if (!publicUrl) return "";
+    return `${window.location.origin}/liff-bridge?returnUrl=${encodeURIComponent(
+      publicUrl
+    )}`;
+  }, [publicUrl]);
+
+  const copyText = async (label: string, value: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`คัดลอก ${label} แล้ว`);
+    } catch (error) {
+      console.error("copy failed", error);
+      toast.error("คัดลอกไม่สำเร็จ");
+    }
   };
 
   async function loadAll() {
@@ -149,17 +172,44 @@ export default function Website() {
             )}
           </div>
 
-          {/* Builder Card */}
+          {/* Share Links Card */}
           <div className="bg-white rounded-2xl p-5 border">
-            <div className="text-sm text-gray-500">Website Builder</div>
-            <div className="text-sm text-gray-700 mt-2 break-all">{builderUrl}</div>
-            <button
-              onClick={() => navigate("/web-builder")}
-              className="mt-3 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 w-full"
-            >
-              เปิด Website Builder
-            </button>
+            <div className="text-sm text-gray-500">ลิงก์แชร์ให้ลูกค้า (เปิดผ่าน LINE)</div>
+            {liffUrl ? (
+              <div className="mt-2 space-y-2 text-sm text-gray-700">
+                <div className="break-all">{liffUrl}</div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => copyText("ลิงก์ LINE", liffUrl)}
+                    className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
+                  >
+                    คัดลอกลิงก์
+                  </button>
+                  <button
+                    onClick={() => window.open(liffUrl, "_blank")}
+                    className="px-3 py-2 rounded-lg border text-sm font-semibold"
+                  >
+                    เปิด
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-400 mt-2">
+                ยังไม่มีลิงก์ (ต้องเผยแพร่เว็บไซต์ก่อน)
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {!loading && storeId && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => navigate("/web-builder")}
+            className="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold"
+          >
+            เปิด Website Builder
+          </button>
         </div>
       )}
 

@@ -12,7 +12,6 @@ interface SidebarProps {
 
 const navItems = [
   { path: '/dashboard', icon: Home, label: 'หน้าหลัก' },
-  { path: '/line-setup', icon: MessageSquare, label: 'ตั้งค่า Line OA' },
   { path: '/broadcast', icon: Send, label: 'ส่งข้อความ' },
   { path: '/analytics', icon: BarChart3, label: 'รายงานสถิติ' },
   { path: "/website", icon: Globe, label: "Website" },

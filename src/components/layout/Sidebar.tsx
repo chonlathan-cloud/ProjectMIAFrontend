@@ -1,4 +1,4 @@
-import { Home, Send, BarChart3, Users, Settings, MessageSquare, X } from 'lucide-react';
+import { Home, Send, BarChart3, Users, Settings, MessageSquare, X, ShoppingCart } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ const navItems = [
   { path: "/web-builder", icon: Globe, label: "Web Builder" },
   { path: "/ai-trainer", icon: MessageSquare, label: "AI Trainer" },
   { path: '/customers', icon: Users, label: 'ลูกค้า' },
+  { path: '/orders', icon: ShoppingCart, label: 'คำสั่งซื้อ' },
   { path: '/inbox', icon: MessageSquare, label: 'กล่องข้อความ' },
   { path: '/settings', icon: Settings, label: 'ตั้งค่า' },
 ];

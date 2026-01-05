@@ -73,6 +73,9 @@ const templates: Array<{
         showBanner: true,
         policyVersion: "v1",
       },
+      payment: {
+        promptpayId: "",
+      },
     },
   },
   {
@@ -131,6 +134,9 @@ const templates: Array<{
         showBanner: true,
         policyVersion: "v1",
       },
+      payment: {
+        promptpayId: "",
+      },
     },
   },
 ];
@@ -143,6 +149,7 @@ const createProduct = () => ({
   url: "",
   shortDesc: "",
   tags: [] as string[],
+  stock: undefined as number | undefined,
 });
 
 const toLines = (value: string) =>
@@ -201,6 +208,9 @@ const toV2Config = (
     pdpa: {
       showBanner: true,
       policyVersion: "v1",
+    },
+    payment: {
+      promptpayId: legacy.payment?.promptpayId || "",
     },
   };
 };
@@ -361,6 +371,16 @@ export default function WebBuilder() {
     }));
   };
 
+  const updatePayment = (key: "promptpayId", value: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      payment: {
+        ...(prev.payment || {}),
+        [key]: value,
+      },
+    }));
+  };
+
   const copyText = async (label: string, value: string) => {
     if (!value) return;
     try {
@@ -388,7 +408,7 @@ export default function WebBuilder() {
   const updateProduct = (
     index: number,
     key: keyof SiteConfigV2["products"][number],
-    value: string
+    value: string | number | undefined
   ) => {
     setConfig((prev) => {
       const next = [...prev.products];
@@ -712,6 +732,19 @@ export default function WebBuilder() {
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  PromptPay ID
+                </label>
+                <Input
+                  value={config.payment?.promptpayId || ""}
+                  onChange={(e) => updatePayment("promptpayId", e.target.value)}
+                  placeholder="เบอร์มือถือ / เลขบัตร / เลขผู้เสียภาษี"
+                />
+                <p className="text-xs text-gray-500">
+                  ใช้สร้าง QR PromptPay สำหรับชำระเงินในหน้าร้าน
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -826,14 +859,30 @@ export default function WebBuilder() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-500">ลิงก์สินค้า</label>
+                      <label className="text-xs text-gray-500">สต็อก</label>
                       <Input
-                        value={product.url || ""}
-                        onChange={(e) =>
-                          updateProduct(index, "url", e.target.value)
-                        }
+                        type="number"
+                        value={product.stock ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateProduct(
+                            index,
+                            "stock",
+                            value ? Number(value) : undefined
+                          );
+                        }}
+                        placeholder="ปล่อยว่าง = ไม่จำกัด"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-gray-500">ลิงก์สินค้า</label>
+                    <Input
+                      value={product.url || ""}
+                      onChange={(e) =>
+                        updateProduct(index, "url", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">

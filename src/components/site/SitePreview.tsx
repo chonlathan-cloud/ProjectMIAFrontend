@@ -48,6 +48,7 @@ export type SiteConfigV2 = {
     url?: string;
     shortDesc?: string;
     tags?: string[];
+    stock?: number;
   }>;
   sections?: {
     highlights?: string[];
@@ -58,6 +59,9 @@ export type SiteConfigV2 = {
     consentText?: string;
     policyVersion?: string;
     showBanner?: boolean;
+  };
+  payment?: {
+    promptpayId?: string;
   };
   metadata?: {
     slug?: string;
@@ -209,6 +213,21 @@ export default function SitePreview({
     address: "",
     note: "",
   });
+  const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "loading" | "error">(
+    "idle"
+  );
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [orderResult, setOrderResult] = useState<{
+    orderId: string;
+    total: number;
+    promptpayId: string;
+    qrUrl: string;
+    slipUrl?: string;
+  } | null>(null);
+  const [slipStatus, setSlipStatus] = useState<"idle" | "uploading" | "error" | "success">(
+    "idle"
+  );
+  const [slipError, setSlipError] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<
     Array<{
       id: string;
@@ -230,6 +249,64 @@ export default function SitePreview({
     [cartItems]
   );
 
+  const resolveApiBase = () => {
+    const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+    if (!base) return "/api";
+    return base.endsWith("/api") ? base : `${base}/api`;
+  };
+
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("Invalid file"));
+          return;
+        }
+        resolve(result);
+      };
+      reader.onerror = () => reject(new Error("อ่านไฟล์ไม่สำเร็จ"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleSlipUpload = async (file: File) => {
+    if (!storeId || !orderResult) return;
+    if (file.size > 1024 * 1024) {
+      setSlipStatus("error");
+      setSlipError("ไฟล์ใหญ่เกิน 1MB");
+      return;
+    }
+    setSlipStatus("uploading");
+    setSlipError(null);
+    try {
+      const base = resolveApiBase();
+      const dataUrl = await fileToBase64(file);
+      const res = await fetch(`${base}/sites/order/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          orderId: orderResult.orderId,
+          slipBase64: dataUrl,
+          fileName: file.name,
+          contentType: file.type || "image/jpeg",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "อัปโหลดสลิปไม่สำเร็จ");
+      }
+      setOrderResult((prev) =>
+        prev ? { ...prev, slipUrl: data.slipUrl } : prev
+      );
+      setSlipStatus("success");
+    } catch (err: any) {
+      setSlipStatus("error");
+      setSlipError(err?.message || "อัปโหลดสลิปไม่สำเร็จ");
+    }
+  };
+
   const handleCtaClick = () => {
     if (!enableTracking || !storeId) return;
     trackEvent(
@@ -241,14 +318,21 @@ export default function SitePreview({
   };
 
   const handleAddToCart = (product: SiteConfigV2["products"][number]) => {
+    const stock = Number(product.stock);
+    if (Number.isFinite(stock) && stock <= 0) return;
     const price = parsePrice(product.price);
     if (!price) return;
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-        );
+        return prev.map((item) => {
+          if (item.id !== product.id) return item;
+          const nextQty = item.qty + 1;
+          if (Number.isFinite(stock)) {
+            return { ...item, qty: Math.min(nextQty, stock) };
+          }
+          return { ...item, qty: nextQty };
+        });
       }
       return [
         ...prev,
@@ -275,9 +359,17 @@ export default function SitePreview({
   const updateQty = (id: string, nextQty: number) => {
     setCartItems((prev) =>
       prev
-        .map((item) =>
-          item.id === id ? { ...item, qty: Math.max(1, nextQty) } : item
-        )
+        .map((item) => {
+          if (item.id !== id) return item;
+          const stock = Number(
+            normalized.products.find((product) => product.id === id)?.stock
+          );
+          const safeQty = Math.max(1, nextQty);
+          if (Number.isFinite(stock)) {
+            return { ...item, qty: Math.min(safeQty, stock) };
+          }
+          return { ...item, qty: safeQty };
+        })
         .filter((item) => item.qty > 0)
     );
   };
@@ -293,19 +385,53 @@ export default function SitePreview({
     }
   };
 
-  const handleCheckoutSubmit = (event: React.FormEvent) => {
+  const handleCheckoutSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (enableTracking && storeId) {
-      trackEvent(storeId, "checkout_submit", {
-        total: cartTotal,
-        items: cartItems.map((item) => ({
-          id: item.id,
-          name: item.name,
-          qty: item.qty,
-          price: item.price,
-        })),
-        customer: checkout,
+    if (!storeId) return;
+    setCheckoutStatus("loading");
+    setCheckoutError(null);
+    try {
+      const base = resolveApiBase();
+      const res = await fetch(`${base}/sites/order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          items: cartItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            qty: item.qty,
+            imageUrl: item.imageUrl,
+          })),
+          customer: {
+            ...checkout,
+            lineUserId: localStorage.getItem("cb_line_user_id") || null,
+          },
+        }),
       });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "สร้างคำสั่งซื้อไม่สำเร็จ");
+      }
+      setOrderResult({
+        orderId: data.orderId,
+        total: data.total,
+        promptpayId: data.promptpayId,
+        qrUrl: data.qrUrl,
+      });
+      setCheckoutOpen(false);
+      if (enableTracking) {
+        trackEvent(storeId, "checkout_submit", {
+          total: cartTotal,
+          orderId: data.orderId,
+        });
+      }
+    } catch (err: any) {
+      setCheckoutStatus("error");
+      setCheckoutError(err?.message || "สร้างคำสั่งซื้อไม่สำเร็จ");
+    } finally {
+      setCheckoutStatus("idle");
     }
   };
 
@@ -414,10 +540,13 @@ export default function SitePreview({
                   <button
                     type="button"
                     onClick={() => handleAddToCart(product)}
-                    className="px-2 py-1 text-[11px] font-semibold rounded-full bg-gray-100"
+                    className="px-2 py-1 text-[11px] font-semibold rounded-full bg-gray-100 disabled:opacity-60"
                     style={{ color: accent }}
+                    disabled={Number.isFinite(Number(product.stock)) && Number(product.stock) <= 0}
                   >
-                    เพิ่มลงตะกร้า
+                    {Number.isFinite(Number(product.stock)) && Number(product.stock) <= 0
+                      ? "สินค้าหมด"
+                      : "เพิ่มลงตะกร้า"}
                   </button>
                 </div>
               </div>
@@ -637,10 +766,82 @@ export default function SitePreview({
                   <span>ยอดรวม</span>
                   <span>฿{cartTotal.toLocaleString()}</span>
                 </div>
-                <Button type="submit" className="w-full">
-                  ส่งคำสั่งซื้อ
+                <Button type="submit" className="w-full" disabled={checkoutStatus === "loading"}>
+                  {checkoutStatus === "loading" ? "กำลังสร้างคำสั่งซื้อ..." : "ส่งคำสั่งซื้อ"}
                 </Button>
+                {checkoutError ? (
+                  <div className="text-xs text-amber-600">{checkoutError}</div>
+                ) : null}
               </form>
+            </div>
+          )}
+
+          {orderResult && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center">
+              <div
+                className="absolute inset-0 bg-black/30"
+                onClick={() => setOrderResult(null)}
+              />
+              <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">ชำระเงินด้วย PromptPay</h3>
+                  <button
+                    type="button"
+                    className="text-sm text-gray-500"
+                    onClick={() => setOrderResult(null)}
+                  >
+                    ปิด
+                  </button>
+                </div>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-center">
+                  <img
+                    src={orderResult.qrUrl}
+                    alt="PromptPay QR"
+                    className="mx-auto h-56 w-56 object-contain"
+                  />
+                  <div className="mt-3 text-sm text-gray-600">
+                    ยอดชำระ: <span className="font-semibold">฿{orderResult.total.toLocaleString()}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    PromptPay: {orderResult.promptpayId}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500">
+                  หลังโอนเงินแล้ว กรุณาติดต่อร้านหรือส่งสลิปเพื่อยืนยัน
+                </div>
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-600">
+                  <div className="font-semibold text-gray-700">อัปโหลดสลิป</div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="mt-2 text-xs"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) handleSlipUpload(file);
+                    }}
+                  />
+                  {slipStatus === "uploading" && (
+                    <div className="mt-2 text-amber-600">กำลังอัปโหลดสลิป...</div>
+                  )}
+                  {slipStatus === "success" && orderResult.slipUrl && (
+                    <a
+                      href={orderResult.slipUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex text-emerald-600 underline"
+                    >
+                      ดูสลิปที่อัปโหลด
+                    </a>
+                  )}
+                  {slipStatus === "error" && slipError && (
+                    <div className="mt-2 text-red-600">{slipError}</div>
+                  )}
+                </div>
+                <Button className="w-full" onClick={() => setOrderResult(null)}>
+                  ปิดหน้าต่าง
+                </Button>
+              </div>
             </div>
           )}
         </>

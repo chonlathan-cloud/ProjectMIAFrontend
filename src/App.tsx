@@ -22,6 +22,7 @@ import KnowledgeEditor from '@/pages/KnowledgeEditor';
 import Website from '@/pages/Website';
 import WebBuilder from '@/pages/WebBuilder';
 import AiTrainer from '@/pages/AiTrainer';
+import Orders from '@/pages/Orders';
 import StoreIntegration from '@/pages/settings/StoreIntegration';
 
 import { SignUp } from '@/pages/SignUp';
@@ -132,6 +133,7 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="customers" element={<Customers />} />
           <Route path="inbox" element={<Inbox />} />
+          <Route path="orders" element={<Orders />} />
           <Route path="website" element={<Website />} />
           <Route path="web-builder" element={<WebBuilder />} />
           <Route path="ai-trainer" element={<AiTrainer />} />

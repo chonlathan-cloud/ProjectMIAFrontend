@@ -357,3 +357,56 @@ export async function uploadLineImage(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+// --------------------------------------------------
+// ORDERS
+// --------------------------------------------------
+export type OrderItem = {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+  imageUrl?: string | null;
+};
+
+export type OrderRecord = {
+  id: string;
+  storeId: string;
+  status: string;
+  total: number;
+  items: OrderItem[];
+  customer?: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    note?: string;
+    lineUserId?: string | null;
+  };
+  payment?: {
+    method?: string;
+    promptpayId?: string;
+    qrUrl?: string;
+    slipUrl?: string;
+    amount?: number;
+  };
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+export async function getOrders(storeId: string, status?: string) {
+  const query = new URLSearchParams();
+  query.set("storeId", storeId);
+  if (status) query.set("status", status);
+  return authedJson(`/orders?${query.toString()}`);
+}
+
+export async function updateOrderStatus(
+  storeId: string,
+  orderId: string,
+  status: string
+) {
+  return authedJson(`/orders/${orderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ storeId, status }),
+  });
+}

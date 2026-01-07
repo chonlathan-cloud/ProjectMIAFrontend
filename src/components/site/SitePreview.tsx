@@ -704,7 +704,7 @@ export default function SitePreview({
                 onClick={() => setCheckoutOpen(false)}
               />
               <form
-                className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3"
+                className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto overscroll-contain"
                 onSubmit={handleCheckoutSubmit}
               >
                 <div className="flex items-center justify-between">
@@ -782,7 +782,7 @@ export default function SitePreview({
                 className="absolute inset-0 bg-black/30"
                 onClick={() => setOrderResult(null)}
               />
-              <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3">
+              <div className="relative w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto overscroll-contain">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">ชำระเงินด้วย PromptPay</h3>
                   <button

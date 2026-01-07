@@ -1,7 +1,7 @@
 // src/pages/Inbox.tsx
 import { useEffect, useState, useRef } from "react";
 import { useStore } from "@/store/useStore";
-import { getAuthToken, getInboxCustomers, getInboxHistory, sendInboxMessage } from "@/lib/api";
+import { getAuthToken, getInboxCustomers, getInboxHistory, getInboxSuggestions, sendInboxMessage } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, RefreshCw, User as UserIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Customer {
   id: string; // Firestore Doc ID
@@ -45,11 +46,13 @@ export default function Inbox() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   
   // Loading States
   const [loadingList, setLoadingList] = useState(false);
   const [loadingChat, setLoadingChat] = useState(false);
   const [sending, setSending] = useState(false);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
 
   // Refs (สำหรับเลื่อนแชทลงล่างสุด)
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,7 @@ export default function Inbox() {
   const loadChat = async (customer: Customer) => {
     if (!store?.id) return;
     setSelectedCustomer(customer);
+    setSuggestions([]);
     setLoadingChat(true);
     try {
       // ใช้ ID ของ Customer (ซึ่งคือ UserID) ในการดึงแชท
@@ -105,6 +109,21 @@ export default function Inbox() {
       console.error("Load chat failed", error);
     } finally {
       setLoadingChat(false);
+    }
+  };
+
+  const loadSuggestions = async () => {
+    if (!store?.id || !selectedCustomer) return;
+    setLoadingSuggest(true);
+    try {
+      const res: any = await getInboxSuggestions(store.id, selectedCustomer.id);
+      const replies = res?.replies || res?.data?.replies || [];
+      setSuggestions(Array.isArray(replies) ? replies : []);
+    } catch (error) {
+      console.error("Load AI suggestions failed", error);
+      toast.error("โหลดข้อความแนะนำไม่สำเร็จ");
+    } finally {
+      setLoadingSuggest(false);
     }
   };
 
@@ -316,6 +335,33 @@ export default function Inbox() {
 
             {/* Input */}
             <div className="p-4 bg-white border-t">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500">AI Suggest</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadSuggestions}
+                  disabled={loadingSuggest}
+                >
+                  {loadingSuggest ? "กำลังโหลด..." : "ขอคำแนะนำ"}
+                </Button>
+              </div>
+
+              {suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {suggestions.map((text, idx) => (
+                    <button
+                      key={`suggest-${idx}`}
+                      type="button"
+                      className="text-xs px-3 py-1 rounded-full border bg-gray-50 hover:bg-gray-100"
+                      onClick={() => setInputText(text)}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <form onSubmit={handleSend} className="flex gap-2">
                 <Input
                   value={inputText}

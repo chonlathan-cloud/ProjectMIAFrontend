@@ -17,10 +17,12 @@ type KnowledgeDoc = {
   title?: string;
   type?: string;
   items?: QaItem[];
+  content?: string;
   updatedAt?: string;
 };
 
 const QA_DOC_ID = "qa";
+const ABOUT_DOC_ID = "about";
 
 function parseKeywords(value: string): string[] {
   return value
@@ -35,6 +37,9 @@ export default function AiTrainer() {
   const [items, setItems] = useState<QaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [aboutText, setAboutText] = useState("");
+  const [aboutLoading, setAboutLoading] = useState(false);
+  const [aboutSaving, setAboutSaving] = useState(false);
 
   const loadQa = async () => {
     if (!storeId) return;
@@ -81,8 +86,43 @@ export default function AiTrainer() {
     }
   };
 
+  const loadAbout = async () => {
+    if (!storeId) return;
+    setAboutLoading(true);
+    try {
+      const res: any = await authedJson(`/knowledge/${storeId}/${ABOUT_DOC_ID}`);
+      const data = res?.data as KnowledgeDoc | null;
+      setAboutText(data?.content || "");
+    } catch (err: any) {
+      toast.error(err?.message || "โหลด About Us ไม่สำเร็จ");
+    } finally {
+      setAboutLoading(false);
+    }
+  };
+
+  const saveAbout = async () => {
+    if (!storeId) return;
+    setAboutSaving(true);
+    try {
+      await authedJson(`/knowledge/${storeId}/${ABOUT_DOC_ID}`, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "about",
+          title: "About Us",
+          content: aboutText,
+        }),
+      });
+      toast.success("บันทึก About Us แล้ว");
+    } catch (err: any) {
+      toast.error(err?.message || "บันทึก About Us ไม่สำเร็จ");
+    } finally {
+      setAboutSaving(false);
+    }
+  };
+
   useEffect(() => {
     loadQa();
+    loadAbout();
   }, [storeId]);
 
   if (!storeId) {
@@ -105,6 +145,29 @@ export default function AiTrainer() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>About Us (ข้อมูลร้าน)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500">
+            ใส่ข้อมูลร้านแบบย่อเพื่อให้ AI เข้าใจธุรกิจและตอบลูกค้าได้ตรงขึ้น
+          </p>
+          <Textarea
+            rows={5}
+            placeholder="เช่น ร้านก่อตั้งเมื่อ..., จุดเด่น, บริการหลัก, เวลาเปิด-ปิด"
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
+            disabled={aboutLoading}
+          />
+          <div className="flex justify-end">
+            <Button onClick={saveAbout} disabled={aboutSaving}>
+              {aboutSaving ? "กำลังบันทึก..." : "บันทึก About Us"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

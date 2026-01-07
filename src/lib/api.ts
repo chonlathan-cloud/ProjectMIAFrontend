@@ -169,6 +169,13 @@ export async function sendInboxMessage(customerId: string, message: string) {
   });
 }
 
+export async function getInboxSuggestions(storeId: string, userId: string) {
+  return authedJson(`/inbox/suggest`, {
+    method: "POST",
+    body: JSON.stringify({ storeId, userId }),
+  });
+}
+
 export async function updateCustomerAdmin(
   storeId: string,
   customerId: string,

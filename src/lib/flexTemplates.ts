@@ -6,6 +6,8 @@ export type FlexTemplate = {
   contents: Record<string, unknown>;
 };
 
+const defaultImageUrl = 'https://lineboost-sme-sandbox.web.app/image/logo_mia.jpg';
+
 export const flexTemplates: FlexTemplate[] = [
   {
     id: 'flash-sale',
@@ -16,7 +18,7 @@ export const flexTemplates: FlexTemplate[] = [
       type: 'bubble',
       hero: {
         type: 'image',
-        url: 'https://example.com/flash-sale.jpg',
+        url: defaultImageUrl,
         size: 'full',
         aspectRatio: '20:13',
         aspectMode: 'cover',
@@ -60,7 +62,7 @@ export const flexTemplates: FlexTemplate[] = [
           type: 'bubble',
           hero: {
             type: 'image',
-            url: 'https://example.com/product-1.jpg',
+            url: defaultImageUrl,
             size: 'full',
             aspectRatio: '20:13',
             aspectMode: 'cover',
@@ -89,7 +91,7 @@ export const flexTemplates: FlexTemplate[] = [
           type: 'bubble',
           hero: {
             type: 'image',
-            url: 'https://example.com/product-2.jpg',
+            url: defaultImageUrl,
             size: 'full',
             aspectRatio: '20:13',
             aspectMode: 'cover',

@@ -169,6 +169,17 @@ export async function sendInboxMessage(customerId: string, message: string) {
   });
 }
 
+export async function updateCustomerAdmin(
+  storeId: string,
+  customerId: string,
+  isAdmin: boolean
+) {
+  return authedJson(`/inbox/customers/${customerId}/admin`, {
+    method: "POST",
+    body: JSON.stringify({ storeId, isAdmin }),
+  });
+}
+
 // --------------------------------------------------
 // STORES
 // --------------------------------------------------

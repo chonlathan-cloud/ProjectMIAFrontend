@@ -44,7 +44,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             ['awaiting_payment', 'pending_review'].includes(order.status || '')
           )
         );
-      } catch (err) {
+      } catch {
         if (mounted) setOrderAlerts([]);
       } finally {
         if (mounted) setOrderLoading(false);

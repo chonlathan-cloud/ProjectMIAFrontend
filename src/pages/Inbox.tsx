@@ -133,7 +133,7 @@ export default function Inbox() {
       // โหลด list ใหม่ด้วยเผื่ออัปเดต last message
       loadCustomers(); 
 
-    } catch (error) {
+    } catch {
       alert("ส่งข้อความไม่สำเร็จ");
       setInputText(tempText); // คืนค่าถ้าพัง
     } finally {

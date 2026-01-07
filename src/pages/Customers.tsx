@@ -4,12 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useStore } from '@/store/useStore';
-import { getInboxCustomers } from '@/lib/api';
+import { getInboxCustomers, updateCustomerAdmin } from '@/lib/api';
 import { RefreshCw, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 export function Customers() {
   const { store } = useStore();
@@ -17,6 +19,7 @@ export function Customers() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [adminUpdating, setAdminUpdating] = useState<Record<string, boolean>>({});
 
   const loadCustomers = async () => {
     if (!store?.id) return;
@@ -32,6 +35,9 @@ export function Customers() {
         lastMessage: c.lastMessage || '',
         lastTime: c.lastTime || c.lastActivity || null,
         pdpaConsentAccepted: !!c.pdpaConsentAccepted,
+        isAdmin: !!c.isAdmin,
+        lastEventType: c.lastEventType || null,
+        hasMessaged: !!c.hasMessaged,
       }));
       setCustomers(normalized);
     } catch (err: any) {
@@ -61,6 +67,24 @@ export function Customers() {
       return haystack.includes(term);
     });
   }, [customers, query]);
+
+  const handleToggleAdmin = async (customer: Customer, next: boolean) => {
+    if (!store?.id) return;
+    setAdminUpdating((prev) => ({ ...prev, [customer.id]: true }));
+    try {
+      await updateCustomerAdmin(store.id, customer.id, next);
+      setCustomers((prev) =>
+        prev.map((item) =>
+          item.id === customer.id ? { ...item, isAdmin: next } : item
+        )
+      );
+      toast.success(next ? 'เปิดสิทธิ์ admin แล้ว' : 'ปิดสิทธิ์ admin แล้ว');
+    } catch (err: any) {
+      toast.error(err?.message || 'อัปเดตสิทธิ์ไม่สำเร็จ');
+    } finally {
+      setAdminUpdating((prev) => ({ ...prev, [customer.id]: false }));
+    }
+  };
 
   if (!store) return <div className="p-10 text-center">กรุณาเลือกร้านค้า</div>;
 
@@ -123,10 +147,12 @@ export function Customers() {
           ) : (
             <div className="rounded-xl border border-gray-200">
               <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-semibold text-gray-500 bg-gray-50 border-b">
-                <div className="col-span-5">ลูกค้า</div>
-                <div className="col-span-4">ข้อความล่าสุด</div>
-                <div className="col-span-2">ล่าสุด</div>
+                <div className="col-span-4">ลูกค้า</div>
+                <div className="col-span-2">สถานะ</div>
+                <div className="col-span-3">ข้อความล่าสุด</div>
+                <div className="col-span-1">ล่าสุด</div>
                 <div className="col-span-1 text-right">PDPA</div>
+                <div className="col-span-1 text-right">Admin</div>
               </div>
               <ScrollArea className="max-h-[520px]">
                 {filtered.map((customer) => (
@@ -134,7 +160,7 @@ export function Customers() {
                     key={customer.id}
                     className="grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0"
                   >
-                    <div className="col-span-5 flex items-center gap-3 min-w-0">
+                    <div className="col-span-4 flex items-center gap-3 min-w-0">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={customer.pictureUrl} />
                         <AvatarFallback>{customer.displayName?.[0] || '?'}</AvatarFallback>
@@ -146,10 +172,23 @@ export function Customers() {
                         <p className="text-xs text-gray-500 truncate">{customer.userId}</p>
                       </div>
                     </div>
-                    <div className="col-span-4 text-sm text-gray-600 truncate">
+                    <div className="col-span-2">
+                      {customer.hasMessaged ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                          ทักแล้ว
+                        </Badge>
+                      ) : customer.lastEventType === 'follow' ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                          ติดตามแล้ว
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">ยังไม่ทัก</Badge>
+                      )}
+                    </div>
+                    <div className="col-span-3 text-sm text-gray-600 truncate">
                       {customer.lastMessage || '-'}
                     </div>
-                    <div className="col-span-2 text-xs text-gray-500">
+                    <div className="col-span-1 text-xs text-gray-500">
                       {formatTimestamp(customer.lastTime)}
                     </div>
                     <div className="col-span-1 text-right">
@@ -160,6 +199,13 @@ export function Customers() {
                       ) : (
                         <Badge variant="outline">N/A</Badge>
                       )}
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <Switch
+                        checked={!!customer.isAdmin}
+                        onCheckedChange={(next) => handleToggleAdmin(customer, next)}
+                        disabled={!!adminUpdating[customer.id]}
+                      />
                     </div>
                   </div>
                 ))}
@@ -180,6 +226,9 @@ type Customer = {
   lastMessage?: string;
   lastTime?: any;
   pdpaConsentAccepted?: boolean;
+  isAdmin?: boolean;
+  lastEventType?: string | null;
+  hasMessaged?: boolean;
 };
 
 function formatTimestamp(ts: any) {

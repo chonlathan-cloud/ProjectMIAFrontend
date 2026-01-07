@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/store/useStore';
@@ -17,6 +18,12 @@ import {
 } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 
+type LineQuotaInfo = {
+  limit: number;
+  totalUsage: number;
+  remaining: number;
+};
+
 export function Broadcast() {
   const [message, setMessage] = useState('');
   const [aiDrafts, setAiDrafts] = useState<BroadcastAiLayout[]>([]);
@@ -27,6 +34,20 @@ export function Broadcast() {
   const [lineStatus, setLineStatus] = useState<LineStatusResponse['data'] | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [quotaInfo, setQuotaInfo] = useState<LineQuotaInfo | null>(null);
+  const [editableText, setEditableText] = useState('');
+  const [editableCard, setEditableCard] = useState<{
+    title: string;
+    body: string;
+    altText: string;
+    imageUrl?: string;
+    ctaLabel?: string;
+    ctaUrl?: string;
+  } | null>(null);
+  const [editableFlex, setEditableFlex] = useState<{
+    altText: string;
+    contentsText: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const maxImageBytes = 1024 * 1024;
 
@@ -52,6 +73,45 @@ export function Broadcast() {
     };
     fetchStatus();
   }, [store?.id]);
+
+  useEffect(() => {
+    if (!selectedDraft) {
+      setEditableText('');
+      setEditableCard(null);
+      setEditableFlex(null);
+      return;
+    }
+
+    if (selectedDraft.type === 'text') {
+      setEditableText(selectedDraft.text || '');
+      setEditableCard(null);
+      setEditableFlex(null);
+      return;
+    }
+
+    if (selectedDraft.type === 'card') {
+      setEditableCard({
+        title: selectedDraft.card.title || '',
+        body: selectedDraft.card.body || '',
+        altText: selectedDraft.altText || '',
+        imageUrl: selectedDraft.card.imageUrl,
+        ctaLabel: selectedDraft.card.ctaLabel,
+        ctaUrl: selectedDraft.card.ctaUrl,
+      });
+      setEditableText('');
+      setEditableFlex(null);
+      return;
+    }
+
+    if (selectedDraft.type === 'flex') {
+      setEditableFlex({
+        altText: selectedDraft.altText || '',
+        contentsText: JSON.stringify(selectedDraft.flex.contents, null, 2),
+      });
+      setEditableText('');
+      setEditableCard(null);
+    }
+  }, [selectedDraft]);
 
   const refreshStatus = async () => {
     try {
@@ -142,31 +202,61 @@ export function Broadcast() {
 
     try {
       setSending(true);
+      let res: any = null;
       if (selectedDraft.type === 'text') {
-        await sendBroadcastMcp({
+        const nextText = editableText.trim();
+        if (!nextText) {
+          toast.error('กรุณาระบุข้อความก่อนส่ง');
+          return;
+        }
+        res = await sendBroadcastMcp({
           storeId: store.id,
           type: 'text',
-          text: selectedDraft.text,
+          text: nextText,
         });
       } else if (selectedDraft.type === 'card') {
-        await sendBroadcastMcp({
+        const nextCard = editableCard;
+        if (!nextCard?.title || !nextCard.body || !nextCard.altText) {
+          toast.error('กรุณากรอกข้อมูล card ให้ครบ');
+          return;
+        }
+        res = await sendBroadcastMcp({
           storeId: store.id,
           type: 'card',
           card: {
-            ...selectedDraft.card,
-            altText: selectedDraft.altText,
-            imageUrl: uploadedImageUrl || selectedDraft.card.imageUrl,
+            title: nextCard.title,
+            body: nextCard.body,
+            altText: nextCard.altText,
+            ctaLabel: nextCard.ctaLabel,
+            ctaUrl: nextCard.ctaUrl,
+            imageUrl: uploadedImageUrl || nextCard.imageUrl,
           },
         });
       } else {
-        await sendBroadcastMcp({
+        const nextFlex = editableFlex;
+        if (!nextFlex?.altText || !nextFlex.contentsText.trim()) {
+          toast.error('กรุณากรอกข้อมูล flex ให้ครบ');
+          return;
+        }
+        let parsedContents: any = null;
+        try {
+          parsedContents = JSON.parse(nextFlex.contentsText);
+        } catch {
+          toast.error('Flex JSON ไม่ถูกต้อง');
+          return;
+        }
+        res = await sendBroadcastMcp({
           storeId: store.id,
           type: 'flex',
           flex: {
-            altText: selectedDraft.altText,
-            contents: selectedDraft.flex.contents,
+            altText: nextFlex.altText,
+            contents: parsedContents,
           },
         });
+      }
+      const quota = res?.data?.quota || res?.quota;
+      if (quota?.remaining !== undefined) {
+        setQuotaInfo(quota);
       }
       toast.success('ส่ง Broadcast ด้วย AI สำเร็จ');
       setAiDrafts([]);
@@ -266,12 +356,20 @@ export function Broadcast() {
                     rows={8}
                     className="resize-none"
                   />
-                  <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
+                  <div className="flex flex-wrap items-center text-sm text-gray-500">
                     <span>{message.length} / 1000 ตัวอักษร</span>
+                    <span className="flex-1 text-center text-xs text-gray-500">
+                      ข้อความต้องไม่เกิน 1000 ตัวอักษร
+                    </span>
                     <span className="text-xs text-emerald-700">
                       AI จะสร้าง 3 แบบ: text / card / flex
                     </span>
                   </div>
+                  {quotaInfo && (
+                    <div className="text-xs text-center text-gray-500">
+                      โควต้าบรอดแคสต์คงเหลือ: {quotaInfo.remaining} / {quotaInfo.limit}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -332,46 +430,112 @@ export function Broadcast() {
                   </div>
 
                   {selectedDraft?.type === 'text' && (
-                    <div className="border rounded-xl p-4 bg-white dark:bg-gray-900">
-                      <p className="text-sm text-gray-500 mb-2">ข้อความ</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {selectedDraft.text}
-                      </p>
+                    <div className="border rounded-xl p-4 bg-white dark:bg-gray-900 space-y-3">
+                      <p className="text-sm text-gray-500">ข้อความ</p>
+                      <Textarea
+                        value={editableText}
+                        onChange={(event) => setEditableText(event.target.value)}
+                        rows={5}
+                      />
                     </div>
                   )}
 
                   {selectedDraft?.type === 'card' ? (
                     <div className="border rounded-xl p-4 bg-white dark:bg-gray-900 space-y-3">
-                      {(uploadedImageUrl || selectedDraft.card.imageUrl) && (
+                      {(uploadedImageUrl || editableCard?.imageUrl) && (
                         <img
-                          src={uploadedImageUrl || selectedDraft.card.imageUrl}
+                          src={uploadedImageUrl || editableCard?.imageUrl}
                           alt="card preview"
                           className="w-full h-44 object-cover rounded-lg"
                         />
                       )}
-                      <div className="space-y-2">
-                        <h3 className="text-lg font-semibold">{selectedDraft.card.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                          {selectedDraft.card.body}
-                        </p>
-                      </div>
-                      {selectedDraft.card.ctaLabel && (
-                        <div className="inline-flex items-center gap-2 text-sm text-emerald-600">
-                          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30">
-                            {selectedDraft.card.ctaLabel}
-                          </span>
-                          {selectedDraft.card.ctaUrl && (
-                            <span className="text-xs text-gray-400 truncate">{selectedDraft.card.ctaUrl}</span>
-                          )}
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-500">Alt Text</label>
+                          <Input
+                            value={editableCard?.altText || ''}
+                            onChange={(event) =>
+                              setEditableCard((prev) =>
+                                prev ? { ...prev, altText: event.target.value } : prev
+                              )
+                            }
+                          />
                         </div>
-                      )}
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-500">Title</label>
+                          <Input
+                            value={editableCard?.title || ''}
+                            onChange={(event) =>
+                              setEditableCard((prev) =>
+                                prev ? { ...prev, title: event.target.value } : prev
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-500">Body</label>
+                          <Textarea
+                            value={editableCard?.body || ''}
+                            onChange={(event) =>
+                              setEditableCard((prev) =>
+                                prev ? { ...prev, body: event.target.value } : prev
+                              )
+                            }
+                            rows={4}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <label className="text-xs text-gray-500">CTA Label</label>
+                            <Input
+                              value={editableCard?.ctaLabel || ''}
+                              onChange={(event) =>
+                                setEditableCard((prev) =>
+                                  prev ? { ...prev, ctaLabel: event.target.value } : prev
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs text-gray-500">CTA URL</label>
+                            <Input
+                              value={editableCard?.ctaUrl || ''}
+                              onChange={(event) =>
+                                setEditableCard((prev) =>
+                                  prev ? { ...prev, ctaUrl: event.target.value } : prev
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : selectedDraft?.type === 'flex' ? (
                     <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-4 bg-slate-50 dark:bg-slate-900/60">
                       <p className="text-sm text-gray-500 mb-2">Flex payload (JSON)</p>
-                      <pre className="text-xs whitespace-pre-wrap break-all text-gray-700 dark:text-gray-300">
-                        {JSON.stringify(selectedDraft.flex.contents, null, 2)}
-                      </pre>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-500">Alt Text</label>
+                          <Input
+                            value={editableFlex?.altText || ''}
+                            onChange={(event) =>
+                              setEditableFlex((prev) =>
+                                prev ? { ...prev, altText: event.target.value } : prev
+                              )
+                            }
+                          />
+                        </div>
+                        <Textarea
+                          value={editableFlex?.contentsText || ''}
+                          onChange={(event) =>
+                            setEditableFlex((prev) =>
+                              prev ? { ...prev, contentsText: event.target.value } : prev
+                            )
+                          }
+                          rows={8}
+                          className="font-mono text-xs"
+                        />
+                      </div>
                     </div>
                   ) : null}
 

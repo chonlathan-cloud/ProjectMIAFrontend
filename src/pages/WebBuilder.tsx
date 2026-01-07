@@ -18,12 +18,12 @@ const templates: Array<{
   config: SiteConfigV2;
 }> = [
   {
-    id: "apple-minimal",
-    name: "Apple Minimal",
-    description: "หน้าเว็บคลีน อ่านง่าย โฟกัสสินค้าเด่น",
+    id: "standard",
+    name: "Standard",
+    description: "เหมาะกับสินค้าทั่วไป เน้นภาพชัด โฟกัสการสั่งซื้อ",
     config: {
       version: "v2",
-      templateId: "apple-minimal",
+      templateId: "standard",
       business: {
         name: "ConnectBridge Store",
         tagline: "ร้านค้าสมัยใหม่เชื่อมต่อ LINE",
@@ -79,54 +79,56 @@ const templates: Array<{
     },
   },
   {
-    id: "apple-commerce",
-    name: "Apple Commerce",
-    description: "เน้นภาพสินค้าใหญ่และ CTA ชัด",
+    id: "clinic",
+    name: "Clinic",
+    description: "เหมาะกับคลินิกที่ต้องการระบบนัดหมายผ่าน LINE",
     config: {
       version: "v2",
-      templateId: "apple-commerce",
+      templateId: "clinic",
       business: {
-        name: "ConnectBridge Store",
-        tagline: "เน้นภาพสินค้าใหญ่แบบ Apple",
-        themeColor: "#0f172a",
+        name: "ConnectBridge Clinic",
+        tagline: "คลินิกทันสมัยพร้อมระบบนัดหมาย",
+        themeColor: "#0f766e",
+        address: "123 ถนนสุขุมวิท กรุงเทพฯ",
+        phone: "02-000-0000",
       },
       hero: {
-        headline: "สินค้าใหม่ พร้อมส่งถึงคุณ",
-        subheadline: "ออกแบบสำหรับ SME ที่ขายผ่าน LINE เป็นหลัก",
-        ctaText: "รับโปรโมชันผ่าน LINE",
+        headline: "ดูแลสุขภาพด้วยทีมแพทย์ผู้เชี่ยวชาญ",
+        subheadline: "นัดหมายง่ายผ่าน LINE พร้อมแจ้งเตือนคิวอัตโนมัติ",
+        ctaText: "นัดหมายผ่าน LINE",
         ctaUrl: "",
         imageUrl: "",
       },
       products: [
         {
           id: "product-1",
-          name: "สินค้าพรีเมียม",
-          price: "1590",
+          name: "ตรวจสุขภาพฟันเบื้องต้น",
+          price: "1200",
           imageUrl: "",
           url: "",
-          shortDesc: "ของแท้พร้อมรับประกัน",
-          tags: ["premium"],
+          shortDesc: "ตรวจ-วิเคราะห์โดยทันตแพทย์",
+          tags: ["appointment"],
         },
         {
           id: "product-2",
-          name: "สินค้าราคาพิเศษ",
-          price: "690",
+          name: "ขูดหินปูน + เคลือบฟลูออไรด์",
+          price: "1800",
           imageUrl: "",
           url: "",
-          shortDesc: "เฉพาะลูกค้า LINE",
-          tags: ["line-only"],
+          shortDesc: "ลดอาการเสียวฟัน พร้อมคำแนะนำดูแล",
+          tags: ["clinic-care"],
         },
       ],
       sections: {
         highlights: [
-          "สั่งผ่าน LINE ได้ทันที",
-          "รองรับชำระเงินหลายช่องทาง",
-          "ระบบติดตามการจัดส่งอัตโนมัติ",
+          "จองคิวออนไลน์ผ่าน LINE ได้ทันที",
+          "ยืนยันตัวตน + แจ้งเตือนนัดหมายอัตโนมัติ",
+          "บริการมาตรฐานคลินิก พร้อมทีมแพทย์ดูแล",
         ],
         trust: [
-          "PDPA Toolkit ครบถ้วน",
-          "บันทึกประวัติการยินยอม",
-          "ปลอดภัยตามมาตรฐาน",
+          "ดูแลข้อมูลตาม PDPA",
+          "บันทึก RoPA ทุกการยินยอม",
+          "มาตรฐานความปลอดภัยระดับคลินิก",
         ],
         gallery: [],
       },
@@ -160,13 +162,26 @@ const toLines = (value: string) =>
 
 const toTextarea = (lines?: string[]) => (lines || []).join("\n");
 
+const normalizeTemplateId = (
+  value?: string
+): SiteConfigV2["templateId"] => {
+  if (value === "apple-commerce") return "clinic";
+  if (value === "apple-minimal") return "standard";
+  if (value === "clinic") return "clinic";
+  return "standard";
+};
+
 const toV2Config = (
   input: SiteConfig,
   storeName?: string,
-  fallbackTemplateId: SiteConfigV2["templateId"] = "apple-minimal"
+  fallbackTemplateId: SiteConfigV2["templateId"] = "standard"
 ): SiteConfigV2 => {
   if ((input as SiteConfigV2).version === "v2") {
-    return input as SiteConfigV2;
+    const v2 = input as SiteConfigV2;
+    return {
+      ...v2,
+      templateId: normalizeTemplateId(v2.templateId),
+    };
   }
 
   const legacy = input as any;
@@ -174,7 +189,7 @@ const toV2Config = (
 
   return {
     version: "v2",
-    templateId: fallbackTemplateId,
+    templateId: normalizeTemplateId(fallbackTemplateId),
     business: {
       name: businessName,
       tagline: legacy.tagline || "",
@@ -265,8 +280,9 @@ export default function WebBuilder() {
           store?.name,
           activeTemplateId
         );
+        const resolvedTemplateId = normalizeTemplateId(v2.templateId);
         setConfig(v2);
-        setActiveTemplateId(v2.templateId || templates[0].id);
+        setActiveTemplateId(resolvedTemplateId);
       } else {
         applyTemplate(activeTemplateId);
       }

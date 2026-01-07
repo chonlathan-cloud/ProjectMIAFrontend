@@ -24,7 +24,7 @@ export type SiteConfigV1 = {
 
 export type SiteConfigV2 = {
   version: "v2";
-  templateId: "apple-minimal" | "apple-commerce";
+  templateId: "apple-minimal" | "apple-commerce" | "standard" | "clinic";
   business: {
     name: string;
     tagline?: string;

@@ -1,5 +1,7 @@
 File Path: /Users/tadapongsrilasak/clone/LineBoost/README.md
 
+for study and desing database
+
 # LineBoost
 
 แพลตฟอร์มสำหรับจัดการ LINE OA, Broadcast, Inbox, Knowledge Base และการเชื่อมต่อร้านค้า โดยใช้ React + Vite + Firebase Auth + API แบบ `/api`.

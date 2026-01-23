@@ -216,6 +216,33 @@ export async function getLineCredentials(storeId: string) {
   return authedJson(`/stores/${storeId}/line-credentials`);
 }
 
+export type OnboardingProfileResponse = {
+  success: boolean;
+  data: {
+    shopName?: string;
+    businessProfile?: {
+      owner_full_name?: string;
+      contact_phone?: string;
+      promptpay_id?: string;
+      promptpay_type?: string;
+      zone1_completed?: boolean;
+      zone1_completed_at?: string;
+      zone2?: Record<string, unknown>;
+      zone2_completed_at?: string;
+    };
+    firstProduct?: {
+      product_id?: string;
+      name?: string;
+      price?: number;
+      description?: string | null;
+    } | null;
+  };
+};
+
+export async function getOnboardingProfile(storeId: string): Promise<OnboardingProfileResponse> {
+  return authedJson(`/stores/${storeId}/onboarding`);
+}
+
 export async function getLineOaLink(storeId: string) {
   const res: any = await authedJson(`/stores/${storeId}/line-credentials`);
   const data = res?.data ?? res;

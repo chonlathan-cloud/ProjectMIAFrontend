@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { authedJson, getLineOaLink, uploadLineImage } from "@/lib/api";
+import { authedJson, getLineOaLink, getOnboardingProfile, uploadLineImage } from "@/lib/api";
 import SitePreview, { SiteConfig, SiteConfigV2 } from "@/components/site/SitePreview";
 
 const templates: Array<{
@@ -252,27 +252,105 @@ export default function WebBuilder() {
     [activeTemplateId]
   );
 
-  const applyTemplate = (templateId: SiteConfigV2["templateId"]) => {
-    const template = templates.find((t) => t.id === templateId);
-    if (!template) return;
-    setActiveTemplateId(templateId);
-    setConfig({
-      ...template.config,
-      business: {
-        ...template.config.business,
-        name: store?.name || template.config.business.name,
-      },
-    });
+const applyTemplate = (templateId: SiteConfigV2["templateId"]) => {
+  const template = templates.find((t) => t.id === templateId);
+  if (!template) return;
+  setActiveTemplateId(templateId);
+  setConfig({
+    ...template.config,
+    business: {
+      ...template.config.business,
+      name: store?.name || template.config.business.name,
+    },
+  });
+};
+
+const getTemplateConfig = (
+  templateId: SiteConfigV2["templateId"],
+  storeName?: string
+): SiteConfigV2 => {
+  const template = templates.find((t) => t.id === templateId) || templates[0];
+  return {
+    ...template.config,
+    business: {
+      ...template.config.business,
+      name: storeName || template.config.business.name,
+    },
   };
+};
+
+const applyOnboardingDefaults = (
+  base: SiteConfigV2,
+  onboarding?: {
+    shopName?: string;
+    businessProfile?: {
+      owner_full_name?: string;
+      contact_phone?: string;
+      promptpay_id?: string;
+    };
+    firstProduct?: {
+      name?: string;
+      price?: number;
+      description?: string | null;
+    } | null;
+  }
+): SiteConfigV2 => {
+  if (!onboarding) return base;
+
+  const profile = onboarding.businessProfile || {};
+  const next: SiteConfigV2 = {
+    ...base,
+    business: {
+      ...base.business,
+      name: onboarding.shopName || base.business?.name,
+      phone: profile.contact_phone || base.business?.phone,
+    },
+    payment: {
+      ...(base.payment || {}),
+      promptpayId: profile.promptpay_id || base.payment?.promptpayId || "",
+    },
+  };
+
+  if (onboarding.firstProduct) {
+    const product = onboarding.firstProduct;
+    const products = [...(next.products || [])];
+    if (products.length === 0) {
+      products.push({
+        id: `product-${Math.random().toString(36).slice(2, 8)}`,
+        name: product.name || "",
+        price: product.price ? String(product.price) : "",
+        imageUrl: "",
+        url: "",
+        shortDesc: product.description || "",
+        tags: [],
+        stock: undefined,
+      });
+    } else {
+      products[0] = {
+        ...products[0],
+        name: product.name || products[0].name,
+        price: product.price ? String(product.price) : products[0].price,
+        shortDesc: product.description || products[0].shortDesc,
+      };
+    }
+    next.products = products;
+  }
+
+  return next;
+};
 
   const loadConfig = async () => {
     if (!storeId) return;
     setLoading(true);
     try {
-      const res: any = await authedJson(`/sites?storeId=${storeId}`);
+      const [res, oa, onboardingRes] = await Promise.all([
+        authedJson(`/sites?storeId=${storeId}`),
+        getLineOaLink(storeId),
+        getOnboardingProfile(storeId),
+      ]);
       const draftConfig = res?.draft?.config as SiteConfig | undefined;
       const published = res?.published;
-      const oa = await getLineOaLink(storeId);
+      const onboarding = onboardingRes?.success ? onboardingRes.data : undefined;
 
       if (draftConfig) {
         const v2 = toV2Config(
@@ -284,7 +362,10 @@ export default function WebBuilder() {
         setConfig(v2);
         setActiveTemplateId(resolvedTemplateId);
       } else {
-        applyTemplate(activeTemplateId);
+        const base = getTemplateConfig(activeTemplateId, store?.name);
+        const merged = applyOnboardingDefaults(base, onboarding);
+        setConfig(merged);
+        setActiveTemplateId(activeTemplateId);
       }
 
       if (oa?.lineOaUrl) {

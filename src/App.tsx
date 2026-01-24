@@ -31,6 +31,7 @@ import { ResetPassword } from '@/pages/ResetPassword';
 import LiffBridge from '@/pages/LiffBridge';
 import PublicSite from '@/pages/PublicSite';
 import PdpaConsent from '@/pages/PdpaConsent';
+import AiChat from '@/pages/AiChat';
 
 import { useStore } from '@/store/useStore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -112,6 +113,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/liff-bridge" element={<LiffBridge />} />
+        <Route path="/ai-chat" element={<AiChat />} />
         <Route path="/public/:storeSlug" element={<PublicSite />} />
         <Route path="/pdpa/:storeId" element={<PdpaConsent />} />
 

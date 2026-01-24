@@ -65,6 +65,11 @@ export type SiteConfigV2 = {
   };
   metadata?: {
     slug?: string;
+    location?: {
+      lat?: number;
+      lng?: number;
+      text?: string;
+    };
   };
 };
 

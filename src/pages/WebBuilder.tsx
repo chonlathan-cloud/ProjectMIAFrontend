@@ -287,27 +287,61 @@ const applyOnboardingDefaults = (
       owner_full_name?: string;
       contact_phone?: string;
       promptpay_id?: string;
+      zone2?: Record<string, unknown>;
     };
     firstProduct?: {
       name?: string;
       price?: number;
       description?: string | null;
+      imageUrl?: string | null;
+      imageUrls?: string[] | null;
     } | null;
   }
 ): SiteConfigV2 => {
   if (!onboarding) return base;
 
   const profile = onboarding.businessProfile || {};
+  const zone2 = (profile.zone2 || {}) as Record<string, unknown>;
+  const storefrontLocation = zone2.storefront_location as
+    | { latitude?: number; longitude?: number; address?: string; title?: string }
+    | undefined;
+  const storefrontText = (zone2.storefront_text as string | undefined)?.trim();
+  const locationText =
+    storefrontText ||
+    storefrontLocation?.address ||
+    (storefrontLocation?.latitude !== undefined && storefrontLocation?.longitude !== undefined
+      ? `${storefrontLocation.latitude},${storefrontLocation.longitude}`
+      : "");
+
   const next: SiteConfigV2 = {
     ...base,
     business: {
       ...base.business,
       name: onboarding.shopName || base.business?.name,
       phone: profile.contact_phone || base.business?.phone,
+      address:
+        storefrontLocation?.latitude !== undefined &&
+        storefrontLocation?.longitude !== undefined
+          ? `${storefrontLocation.latitude},${storefrontLocation.longitude}`
+          : locationText || base.business?.address,
     },
     payment: {
       ...(base.payment || {}),
       promptpayId: profile.promptpay_id || base.payment?.promptpayId || "",
+    },
+    metadata: {
+      ...(base.metadata || {}),
+      location:
+        storefrontLocation?.latitude !== undefined &&
+        storefrontLocation?.longitude !== undefined
+          ? {
+              lat: storefrontLocation.latitude,
+              lng: storefrontLocation.longitude,
+              text: locationText || storefrontLocation?.address,
+            }
+          : locationText
+            ? { text: locationText }
+            : (base.metadata as any)?.location,
     },
   };
 
@@ -319,7 +353,7 @@ const applyOnboardingDefaults = (
         id: `product-${Math.random().toString(36).slice(2, 8)}`,
         name: product.name || "",
         price: product.price ? String(product.price) : "",
-        imageUrl: "",
+        imageUrl: product.imageUrl || product.imageUrls?.[0] || "",
         url: "",
         shortDesc: product.description || "",
         tags: [],
@@ -330,10 +364,19 @@ const applyOnboardingDefaults = (
         ...products[0],
         name: product.name || products[0].name,
         price: product.price ? String(product.price) : products[0].price,
+        imageUrl: product.imageUrl || product.imageUrls?.[0] || products[0].imageUrl,
         shortDesc: product.description || products[0].shortDesc,
       };
     }
     next.products = products;
+  }
+
+  const images = zone2.images as string[] | undefined;
+  if (images && images.length > 0) {
+    next.sections = {
+      ...(next.sections || {}),
+      gallery: images,
+    };
   }
 
   return next;

@@ -29,6 +29,7 @@ import { SignUp } from '@/pages/SignUp';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { ResetPassword } from '@/pages/ResetPassword';
 import LiffBridge from '@/pages/LiffBridge';
+import LineLogin from '@/pages/LineLogin';
 import PublicSite from '@/pages/PublicSite';
 import PdpaConsent from '@/pages/PdpaConsent';
 import AiChat from '@/pages/AiChat';
@@ -113,6 +114,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/liff-bridge" element={<LiffBridge />} />
+        <Route path="/line-login" element={<LineLogin />} />
         <Route path="/ai-chat" element={<AiChat />} />
         <Route path="/public/:storeSlug" element={<PublicSite />} />
         <Route path="/pdpa/:storeId" element={<PdpaConsent />} />

@@ -13,6 +13,12 @@ type ChatResponse = {
   draftId?: string;
 };
 
+type ShopOption = {
+  shopId: string;
+  shopName: string;
+  role?: string;
+};
+
 const TOKEN_KEY = 'cb_line_token';
 const SHOP_KEY = 'cb_line_shop_id';
 const LINE_USER_KEY = 'cb_line_user_id';
@@ -23,21 +29,53 @@ export default function AiChat() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [shops, setShops] = useState<ShopOption[]>([]);
+  const [activeShopId, setActiveShopId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const token = useMemo(() => localStorage.getItem(TOKEN_KEY), []);
-  const shopId = useMemo(() => localStorage.getItem(SHOP_KEY), []);
-  const userId = useMemo(() => localStorage.getItem(LINE_USER_KEY), []);
-  const apiBase = useMemo(() => {
-    const base = import.meta.env.VITE_SERVERA_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [shopId, setShopId] = useState(() => localStorage.getItem(SHOP_KEY));
+  const [userId] = useState(() => localStorage.getItem(LINE_USER_KEY));
+  const serverABase = useMemo(() => {
+    const base =
+      import.meta.env.VITE_SERVERA_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
+    return base.replace(/\/$/, '');
+  }, []);
+  const serverBBase = useMemo(() => {
+    const base = import.meta.env.VITE_API_BASE_URL || '';
     return base.replace(/\/$/, '');
   }, []);
 
   useEffect(() => {
     if (!token || !shopId || !userId) {
       toast.error('ไม่พบสิทธิ์การใช้งาน กรุณาเปิดผ่าน LIFF อีกครั้ง');
+      return;
     }
+    setActiveShopId(shopId);
   }, [token, shopId, userId]);
+
+  useEffect(() => {
+    const loadShops = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch(`${serverABase}/ai/shops`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.detail || 'โหลดรายชื่อร้านไม่สำเร็จ');
+        const list: ShopOption[] = data?.shops || [];
+        setShops(list);
+        if (!activeShopId && data?.selectedShopId) {
+          setActiveShopId(data.selectedShopId);
+        }
+      } catch (error: any) {
+        toast.error(error?.message || 'โหลดรายชื่อร้านไม่สำเร็จ');
+      }
+    };
+    loadShops();
+  }, [token, serverABase, activeShopId]);
 
   const appendMessage = (role: ChatMessage['role'], content: string) => {
     setMessages((prev) => [...prev, { role, content }]);
@@ -49,7 +87,7 @@ export default function AiChat() {
     appendMessage('user', content);
     setSending(true);
     try {
-      const res = await fetch(`${apiBase}/ai/chat`, {
+      const res = await fetch(`${serverABase}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +128,7 @@ export default function AiChat() {
       formData.append('shopId', shopId);
       formData.append('file', file);
 
-      const res = await fetch(`${apiBase}/ai/upload`, {
+      const res = await fetch(`${serverABase}/ai/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -113,7 +151,7 @@ export default function AiChat() {
     if (!draftId || !token) return;
     setSending(true);
     try {
-      const res = await fetch(`${apiBase}/ai/confirm`, {
+      const res = await fetch(`${serverABase}/ai/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +177,44 @@ export default function AiChat() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <div className="px-6 py-4 border-b bg-white">
         <h1 className="text-lg font-semibold">AI Assistant</h1>
-        <p className="text-xs text-gray-500">ผู้ช่วยอัจฉริยะสำหรับร้านของคุณ</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-gray-500">ผู้ช่วยอัจฉริยะสำหรับร้านของคุณ</p>
+          {shops.length > 1 && (
+            <select
+              className="text-xs border rounded-md px-2 py-1"
+              value={activeShopId || ''}
+              onChange={async (e) => {
+                const nextShopId = e.target.value;
+                if (!nextShopId || !userId) return;
+                try {
+                  const res = await fetch(`${serverBBase}/auth/line/select`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lineUserId: userId, shopId: nextShopId }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data?.detail || 'สลับร้านไม่สำเร็จ');
+                  if (data?.token) {
+                    localStorage.setItem(TOKEN_KEY, data.token);
+                    localStorage.setItem(SHOP_KEY, data.shopId || nextShopId);
+                    setToken(data.token);
+                    setShopId(data.shopId || nextShopId);
+                    setActiveShopId(data.shopId || nextShopId);
+                    toast.success('สลับร้านเรียบร้อยค่ะ');
+                  }
+                } catch (error: any) {
+                  toast.error(error?.message || 'สลับร้านไม่สำเร็จ');
+                }
+              }}
+            >
+              {shops.map((shop) => (
+                <option key={shop.shopId} value={shop.shopId}>
+                  {shop.shopName}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6 space-y-3">

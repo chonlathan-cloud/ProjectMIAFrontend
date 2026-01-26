@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import PublishPanel from '@/components/site/PublishPanel';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -42,7 +43,7 @@ export default function AiChat() {
     return base.replace(/\/$/, '');
   }, []);
   const serverBBase = useMemo(() => {
-    const base = import.meta.env.VITE_API_BASE_URL || '';
+    const base = import.meta.env.VITE_API_BASE_URL || '/api';
     return base.replace(/\/$/, '');
   }, []);
 
@@ -79,6 +80,39 @@ export default function AiChat() {
 
   const appendMessage = (role: ChatMessage['role'], content: string) => {
     setMessages((prev) => [...prev, { role, content }]);
+  };
+
+  const lineRequest = async (path: string, options: RequestInit = {}) => {
+    if (!token) {
+      throw new Error('ไม่พบสิทธิ์การใช้งาน กรุณาเปิดผ่าน LIFF อีกครั้ง');
+    }
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const url = path.startsWith('http')
+      ? path
+      : `${serverBBase}${normalizedPath}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {}),
+      },
+    });
+
+    const text = await response.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`Invalid JSON from server: ${text}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.detail || data?.message || 'Request failed');
+    }
+
+    return data;
   };
 
   const sendMessageContent = async (content: string) => {
@@ -215,6 +249,13 @@ export default function AiChat() {
             </select>
           )}
         </div>
+      </div>
+
+      <div className="px-6 pt-4">
+        <PublishPanel
+          storeId={activeShopId || shopId}
+          request={lineRequest}
+        />
       </div>
 
       <div className="flex-1 overflow-auto p-6 space-y-3">

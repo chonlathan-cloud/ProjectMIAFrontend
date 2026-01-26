@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { authedJson, getLineOaLink, getOnboardingProfile, uploadLineImage } from "@/lib/api";
 import SitePreview, { SiteConfig, SiteConfigV2 } from "@/components/site/SitePreview";
+import PublishPanel from "@/components/site/PublishPanel";
 
 const templates: Array<{
   id: SiteConfigV2["templateId"];
@@ -239,11 +240,9 @@ export default function WebBuilder() {
   const [config, setConfig] = useState<SiteConfigV2>(templates[0].config);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
   const [lineOaUrl, setLineOaUrl] = useState<string>("");
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const heroFileInputRef = useRef<HTMLInputElement | null>(null);
   const maxImageBytes = 1024 * 1024;
@@ -391,8 +390,10 @@ const applyOnboardingDefaults = (
         getLineOaLink(storeId),
         getOnboardingProfile(storeId),
       ]);
-      const draftConfig = res?.draft?.config as SiteConfig | undefined;
-      const published = res?.published;
+      const draftConfig =
+        (res?.draft?.config as SiteConfig | undefined) ||
+        (res?.config_json as SiteConfig | undefined) ||
+        (res?.configJson as SiteConfig | undefined);
       const onboarding = onboardingRes?.success ? onboardingRes.data : undefined;
 
       if (draftConfig) {
@@ -422,9 +423,6 @@ const applyOnboardingDefaults = (
         }));
       }
 
-      if (published?.slug) {
-        setPublishedUrl(`${window.location.origin}/public/${published.slug}`);
-      }
     } catch (err: any) {
       toast.error(err?.message || "โหลดข้อมูลเว็บไซต์ไม่สำเร็จ");
     } finally {
@@ -436,58 +434,30 @@ const applyOnboardingDefaults = (
     loadConfig();
   }, [storeId]);
 
+  const saveDraftSilently = async () => {
+    if (!storeId) return;
+    await authedJson("/sites/draft", {
+      method: "PUT",
+      body: JSON.stringify({
+        storeId,
+        config: {
+          ...config,
+          templateId: activeTemplateId,
+        },
+      }),
+    });
+  };
+
   const handleSaveDraft = async () => {
     if (!storeId) return;
     setSaving(true);
     try {
-      await authedJson("/sites/draft", {
-        method: "PUT",
-        body: JSON.stringify({
-          storeId,
-          config: {
-            ...config,
-            templateId: activeTemplateId,
-          },
-        }),
-      });
+      await saveDraftSilently();
       toast.success("บันทึกแบบร่างแล้ว");
     } catch (err: any) {
       toast.error(err?.message || "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!storeId) return;
-    setPublishing(true);
-    try {
-      await authedJson("/sites/draft", {
-        method: "PUT",
-        body: JSON.stringify({
-          storeId,
-          config: {
-            ...config,
-            templateId: activeTemplateId,
-          },
-        }),
-      });
-
-      const res: any = await authedJson("/sites/publish", {
-        method: "POST",
-        body: JSON.stringify({ storeId }),
-      });
-
-      if (res?.slug) {
-        setPublishedUrl(`${window.location.origin}/public/${res.slug}`);
-      }
-
-      toast.success("เผยแพร่เว็บไซต์แล้ว");
-      await loadConfig();
-    } catch (err: any) {
-      toast.error(err?.message || "เผยแพร่ไม่สำเร็จ");
-    } finally {
-      setPublishing(false);
     }
   };
 
@@ -519,17 +489,6 @@ const applyOnboardingDefaults = (
         [key]: value,
       },
     }));
-  };
-
-  const copyText = async (label: string, value: string) => {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success(`คัดลอก ${label} แล้ว`);
-    } catch (error) {
-      console.error("copy failed", error);
-      toast.error("คัดลอกไม่สำเร็จ");
-    }
   };
 
   const updateSections = (
@@ -739,37 +698,8 @@ const applyOnboardingDefaults = (
             <Button onClick={handleSaveDraft} disabled={saving || loading}>
               {saving ? "กำลังบันทึก..." : "บันทึกแบบร่าง"}
             </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={handlePublish}
-              disabled={publishing || loading}
-            >
-              {publishing ? "กำลังเผยแพร่..." : "เผยแพร่"}
-            </Button>
           </div>
         </div>
-        {publishedUrl && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-emerald-200">
-            <span className="font-semibold text-emerald-100">Public URL:</span>
-            <span className="truncate max-w-[520px]">{publishedUrl}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-emerald-200 text-emerald-900 bg-emerald-100 hover:bg-emerald-50"
-              onClick={() => copyText("ลิงก์เว็บไซต์", publishedUrl)}
-            >
-              คัดลอก
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-emerald-100 hover:text-white"
-              onClick={() => window.open(publishedUrl, "_blank")}
-            >
-              เปิด
-            </Button>
-          </div>
-        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -1109,6 +1039,12 @@ const applyOnboardingDefaults = (
               <SitePreview config={config} businessNameFallback={store.name} renderMode="builder" />
             </CardContent>
           </Card>
+
+          <PublishPanel
+            storeId={storeId}
+            request={authedJson}
+            beforePublish={saveDraftSilently}
+          />
 
           <Card className="rounded-3xl">
             <CardHeader>

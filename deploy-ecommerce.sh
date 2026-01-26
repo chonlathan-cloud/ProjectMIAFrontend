@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-lineoa-g49}"
 REGION="${REGION:-asia-southeast1}"
-SERVICE_NAME_RAW="${SERVICE_NAME:-frontend-b}"
+SERVICE_NAME_RAW="${SERVICE_NAME:-webecommerce}"
 SERVICE_NAME="$(printf '%s' "${SERVICE_NAME_RAW}" | tr '[:upper:]' '[:lower:]')"
 REPO_NAME="${REPO_NAME:-frontend-repo}"
 ALLOW_UNAUTHENTICATED="${ALLOW_UNAUTHENTICATED:-true}"
@@ -15,11 +15,15 @@ if ! command -v gcloud >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -f ".env" ]]; then
+ENV_FILE="${ENV_FILE:-.env.ecommerce}"
+if [[ -f "${ENV_FILE}" ]]; then
   set -a
   # shellcheck disable=SC1091
-  . ".env"
+  . "${ENV_FILE}"
   set +a
+else
+  echo "ไม่พบไฟล์ ${ENV_FILE} (ใช้สำหรับ webEcommerce)"
+  exit 1
 fi
 
 if [[ -n "${BACKEND_API_URL:-}" ]]; then
@@ -84,7 +88,7 @@ SUBSTITUTIONS=(
 )
 
 gcloud builds submit \
-  --config "cloudbuild.yaml" \
+  --config "cloudbuild-ecommerce.yaml" \
   --substitutions "$(IFS=,; printf '%s' "${SUBSTITUTIONS[*]}")" \
   .
 

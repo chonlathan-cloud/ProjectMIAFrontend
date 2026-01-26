@@ -117,6 +117,7 @@ function App() {
         <Route path="/line-login" element={<LineLogin />} />
         <Route path="/ai-chat" element={<AiChat />} />
         <Route path="/public/:storeSlug" element={<PublicSite />} />
+        <Route path="/s/:storeSlug" element={<PublicSite />} />
         <Route path="/pdpa/:storeId" element={<PdpaConsent />} />
 
         {/* ---------- Protected ---------- */}

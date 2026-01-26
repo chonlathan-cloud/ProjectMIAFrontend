@@ -102,8 +102,13 @@ export default function PublicSite() {
   const handlePdpaAccept = async () => {
     const lineUserId = localStorage.getItem("cb_line_user_id");
     if (!lineUserId) {
-      setPdpaStatus("error");
-      setPdpaMessage("กรุณาเปิดผ่าน LINE เพื่อยืนยันตัวตน");
+      if (siteData?.storeId) {
+        const key = `cb_pdpa_accepted_${siteData.storeId}`;
+        localStorage.setItem(key, "true");
+      }
+      setPdpaVisible(false);
+      setPdpaStatus("idle");
+      setPdpaMessage(null);
       return;
     }
 

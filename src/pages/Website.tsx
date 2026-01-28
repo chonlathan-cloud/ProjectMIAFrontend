@@ -218,28 +218,28 @@ export default function Website() {
           <div className="bg-white rounded-2xl p-5 border">
             <div className="text-sm text-gray-500">Page Views (7 วัน)</div>
             <div className="text-3xl font-bold mt-2">
-              {analytics.pageViews}
+              {analytics.pageViews ?? 0}
             </div>
           </div>
 
           <div className="bg-white rounded-2xl p-5 border">
             <div className="text-sm text-gray-500">Sessions</div>
             <div className="text-3xl font-bold mt-2">
-              {analytics.uniqueSessions}
+              {analytics.uniqueSessions ?? 0}
             </div>
           </div>
 
           <div className="bg-white rounded-2xl p-5 border">
             <div className="text-sm text-gray-500">CTA Clicks</div>
             <div className="text-3xl font-bold mt-2">
-              {analytics.ctaClicks}
+              {analytics.ctaClicks ?? 0}
             </div>
           </div>
 
           <div className="bg-white rounded-2xl p-5 border lg:col-span-3">
             <div className="text-sm text-gray-500 mb-3">Top Pages</div>
             <div className="space-y-2">
-              {analytics.topPages.map((p) => (
+              {(analytics.topPages ?? []).map((p) => (
                 <div
                   key={p.page}
                   className="flex items-center justify-between text-sm"
@@ -249,7 +249,7 @@ export default function Website() {
                 </div>
               ))}
 
-              {!analytics.topPages.length && (
+              {!(analytics.topPages ?? []).length && (
                 <div className="text-sm text-gray-400">
                   ยังไม่มีข้อมูล
                 </div>

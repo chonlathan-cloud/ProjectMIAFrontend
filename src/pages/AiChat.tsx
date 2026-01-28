@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import PublishPanel from '@/components/site/PublishPanel';
+import {
+  clearStoredToken,
+  getStoredLineUserId,
+  getStoredShopId,
+  getStoredToken,
+  setStoredShopId,
+  setStoredToken,
+} from '@/lib/lineAuthStorage';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -20,9 +28,7 @@ type ShopOption = {
   role?: string;
 };
 
-const TOKEN_KEY = 'cb_line_token';
-const SHOP_KEY = 'cb_line_shop_id';
-const LINE_USER_KEY = 'cb_line_user_id';
+const REFRESH_GRACE_SECONDS = 300;
 
 export default function AiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -34,9 +40,11 @@ export default function AiChat() {
   const [activeShopId, setActiveShopId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
-  const [shopId, setShopId] = useState(() => localStorage.getItem(SHOP_KEY));
-  const [userId] = useState(() => localStorage.getItem(LINE_USER_KEY));
+  const [token, setToken] = useState(() => getStoredToken());
+  const [shopId, setShopId] = useState(() => getStoredShopId());
+  const [userId] = useState(() => getStoredLineUserId());
+  const tokenRef = useRef<string | null>(token);
+  const refreshInFlight = useRef<Promise<string | null> | null>(null);
   const serverABase = useMemo(() => {
     const base =
       import.meta.env.VITE_SERVERA_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
@@ -46,6 +54,10 @@ export default function AiChat() {
     const base = import.meta.env.VITE_API_BASE_URL || '/api';
     return base.replace(/\/$/, '');
   }, []);
+
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
 
   useEffect(() => {
     if (!token || !shopId || !userId) {
@@ -59,9 +71,10 @@ export default function AiChat() {
     const loadShops = async () => {
       if (!token) return;
       try {
+        const validToken = await ensureValidToken();
         const res = await fetch(`${serverABase}/ai/shops`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${validToken}`,
           },
         });
         const data = await res.json();
@@ -78,6 +91,68 @@ export default function AiChat() {
     loadShops();
   }, [token, serverABase, activeShopId]);
 
+  const parseJwtPayload = (rawToken: string) => {
+    try {
+      const payload = rawToken.split('.')[1];
+      if (!payload) return null;
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshAccessToken = async () => {
+    const response = await fetch(`${serverBBase}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const text = await response.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (!response.ok) {
+      clearStoredToken();
+      setToken(null);
+      throw new Error(data?.detail || 'หมดอายุการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่');
+    }
+    const nextToken = data?.token;
+    if (!nextToken) {
+      throw new Error('ไม่พบ token ใหม่จากระบบ');
+    }
+    setStoredToken(nextToken);
+    setToken(nextToken);
+    return nextToken as string;
+  };
+
+  const ensureValidToken = async () => {
+    const currentToken = tokenRef.current;
+    if (!currentToken) {
+      throw new Error('ไม่พบสิทธิ์การใช้งาน กรุณาเปิดผ่าน LIFF อีกครั้ง');
+    }
+    const payload = parseJwtPayload(currentToken);
+    if (!payload?.exp) {
+      return currentToken;
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    const remaining = payload.exp - nowSec;
+    if (remaining > REFRESH_GRACE_SECONDS) {
+      return currentToken;
+    }
+    if (!refreshInFlight.current) {
+      refreshInFlight.current = refreshAccessToken();
+    }
+    try {
+      const nextToken = await refreshInFlight.current;
+      return nextToken || currentToken;
+    } finally {
+      refreshInFlight.current = null;
+    }
+  };
+
   const appendMessage = (role: ChatMessage['role'], content: string) => {
     setMessages((prev) => [...prev, { role, content }]);
   };
@@ -86,6 +161,7 @@ export default function AiChat() {
     if (!token) {
       throw new Error('ไม่พบสิทธิ์การใช้งาน กรุณาเปิดผ่าน LIFF อีกครั้ง');
     }
+    const validToken = await ensureValidToken();
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const url = path.startsWith('http')
       ? path
@@ -95,7 +171,7 @@ export default function AiChat() {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${validToken}`,
         ...(options.headers || {}),
       },
     });
@@ -121,11 +197,12 @@ export default function AiChat() {
     appendMessage('user', content);
     setSending(true);
     try {
+      const validToken = await ensureValidToken();
       const res = await fetch(`${serverABase}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${validToken}`,
         },
         body: JSON.stringify({ shopId, userId, message: trimmed }),
       });
@@ -158,6 +235,7 @@ export default function AiChat() {
     }
     setUploading(true);
     try {
+      const validToken = await ensureValidToken();
       const formData = new FormData();
       formData.append('shopId', shopId);
       formData.append('file', file);
@@ -165,7 +243,7 @@ export default function AiChat() {
       const res = await fetch(`${serverABase}/ai/upload`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${validToken}`,
         },
         body: formData,
       });
@@ -185,11 +263,12 @@ export default function AiChat() {
     if (!draftId || !token) return;
     setSending(true);
     try {
+      const validToken = await ensureValidToken();
       const res = await fetch(`${serverABase}/ai/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${validToken}`,
         },
         body: JSON.stringify({ draftId, confirm }),
       });
@@ -229,8 +308,8 @@ export default function AiChat() {
                   const data = await res.json();
                   if (!res.ok) throw new Error(data?.detail || 'สลับร้านไม่สำเร็จ');
                   if (data?.token) {
-                    localStorage.setItem(TOKEN_KEY, data.token);
-                    localStorage.setItem(SHOP_KEY, data.shopId || nextShopId);
+                    setStoredToken(data.token);
+                    setStoredShopId(data.shopId || nextShopId);
                     setToken(data.token);
                     setShopId(data.shopId || nextShopId);
                     setActiveShopId(data.shopId || nextShopId);

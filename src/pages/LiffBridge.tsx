@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import liff from '@line/liff';
 import { trackEvent } from '@/lib/tracker';
+import {
+  setStoredLineUserId,
+  setStoredShopId,
+  setStoredToken,
+} from '@/lib/lineAuthStorage';
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
 const STORE_KEY = 'cb_store_id';
-const LINE_TOKEN_KEY = 'cb_line_token';
-const LINE_SHOP_KEY = 'cb_line_shop_id';
-
 type LineShop = {
   shopId: string;
   shopName: string;
@@ -62,7 +64,7 @@ export default function LiffBridge() {
         }
 
         const profile = await liff.getProfile();
-        localStorage.setItem('cb_line_user_id', profile.userId);
+        setStoredLineUserId(profile.userId);
         setLineUserId(profile.userId);
 
         const params = new URLSearchParams(window.location.search);
@@ -93,8 +95,8 @@ export default function LiffBridge() {
         }
 
         if (data?.token) {
-          localStorage.setItem(LINE_TOKEN_KEY, data.token);
-          localStorage.setItem(LINE_SHOP_KEY, data.shopId || '');
+          setStoredToken(data.token);
+          setStoredShopId(data.shopId || '');
         }
 
         setStatus('ready');
@@ -134,8 +136,8 @@ export default function LiffBridge() {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.detail || 'เลือก shop ไม่สำเร็จ');
       if (data?.token) {
-        localStorage.setItem(LINE_TOKEN_KEY, data.token);
-        localStorage.setItem(LINE_SHOP_KEY, data.shopId || '');
+        setStoredToken(data.token);
+        setStoredShopId(data.shopId || '');
       }
       setShops([]);
       setMessage('เชื่อมต่อสำเร็จ');

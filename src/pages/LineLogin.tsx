@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-
-const LINE_TOKEN_KEY = 'cb_line_token';
-const LINE_SHOP_KEY = 'cb_line_shop_id';
-const LINE_USER_KEY = 'cb_line_user_id';
+import {
+  setStoredLineUserId,
+  setStoredShopId,
+  setStoredToken,
+} from '@/lib/lineAuthStorage';
 
 export default function LineLogin() {
   const [status, setStatus] = useState<'loading' | 'error' | 'redirect'>('loading');
@@ -28,10 +29,10 @@ export default function LineLogin() {
     }
 
     if (token && shopId) {
-      localStorage.setItem(LINE_TOKEN_KEY, token);
-      localStorage.setItem(LINE_SHOP_KEY, shopId);
+      setStoredToken(token);
+      setStoredShopId(shopId);
       if (lineUserId) {
-        localStorage.setItem(LINE_USER_KEY, lineUserId);
+        setStoredLineUserId(lineUserId);
       }
       setStatus('redirect');
       setMessage('กำลังพาไปหน้า AI Chat...');

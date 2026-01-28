@@ -89,18 +89,41 @@ export const useStore = create<AppState>()(
       setTheme: () => set({ theme: 'light' }),
 
       setStores: (stores) => {
-        const { store } = get();
+        const { store, activeStoreId } = get();
 
-        // ถ้ายังไม่มี active store → ตั้งร้านแรกอัตโนมัติ
-        if (!store && stores.length > 0) {
-          set({
-            stores,
-            store: stores[0],
-            activeStoreId: stores[0].id,
-          });
-        } else {
-          set({ stores });
+        let nextStore = store;
+        let nextActiveId = activeStoreId;
+
+        if (store) {
+          const matched = stores.find((s) => s.id === store.id);
+          if (matched) {
+            nextStore = matched;
+            nextActiveId = matched.id;
+          }
         }
+
+        if (!nextStore && nextActiveId) {
+          const matched = stores.find((s) => s.id === nextActiveId);
+          if (matched) {
+            nextStore = matched;
+            nextActiveId = matched.id;
+          }
+        }
+
+        if (!nextStore && stores.length > 0) {
+          nextStore = stores[0];
+          nextActiveId = stores[0].id;
+        }
+
+        if (!nextStore) {
+          nextActiveId = null;
+        }
+
+        set({
+          stores,
+          store: nextStore,
+          activeStoreId: nextActiveId,
+        });
       },
 
       setActiveStoreById: (storeId) => {

@@ -5,6 +5,8 @@ import {
   setStoredShopId,
   setStoredToken,
 } from '@/lib/lineAuthStorage';
+import { auth } from '@/lib/firebase';
+import { signInWithCustomToken } from 'firebase/auth';
 
 export default function LineLogin() {
   const [status, setStatus] = useState<'loading' | 'error' | 'redirect'>('loading');
@@ -16,32 +18,48 @@ export default function LineLogin() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get('error');
-    const token = params.get('token');
-    const shopId = params.get('shopId');
-    const lineUserId = params.get('lineUserId');
+    const run = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      const token = params.get('token');
+      const shopId = params.get('shopId');
+      const lineUserId = params.get('lineUserId');
 
-    if (error === 'no_shop') {
-      setStatus('error');
-      setMessage('ยังไม่พบการเชื่อมต่อร้านค้า กรุณากดปุ่มเริ่มต้นใช้งานครั้งแรกจาก LINE OA');
-      return;
-    }
-
-    if (token && shopId) {
-      setStoredToken(token);
-      setStoredShopId(shopId);
-      if (lineUserId) {
-        setStoredLineUserId(lineUserId);
+      if (error === 'no_shop') {
+        setStatus('error');
+        setMessage('ยังไม่พบการเชื่อมต่อร้านค้า กรุณากดปุ่มเริ่มต้นใช้งานครั้งแรกจาก LINE OA');
+        return;
       }
-      setStatus('redirect');
-      setMessage('กำลังพาไปหน้า AI Chat...');
-      window.location.replace('/ai-chat');
-      return;
-    }
 
-    const signedToken = params.get('t');
-    const bootstrap = async () => {
+      if (token && shopId) {
+        setStoredToken(token);
+        setStoredShopId(shopId);
+        if (lineUserId) {
+          setStoredLineUserId(lineUserId);
+        }
+        try {
+          const response = await fetch(`${apiBase}/auth/line/firebase`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ shopId }),
+          });
+          const data = await response.json();
+          if (response.ok && data?.firebaseToken) {
+            await signInWithCustomToken(auth, data.firebaseToken);
+          }
+        } catch (error) {
+          console.warn('Firebase sign-in (LINE login) failed', error);
+        }
+        setStatus('redirect');
+        setMessage('กำลังพาไปหน้า AI Chat...');
+        window.location.replace('/ai-chat');
+        return;
+      }
+
+      const signedToken = params.get('t');
       try {
         const endpoint = signedToken ? '/auth/line/bootstrap' : '/auth/line/login-url';
         const response = await fetch(`${apiBase}${endpoint}`, {
@@ -65,7 +83,7 @@ export default function LineLogin() {
       }
     };
 
-    bootstrap();
+    run();
   }, [apiBase]);
 
   return (

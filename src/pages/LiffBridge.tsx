@@ -6,6 +6,8 @@ import {
   setStoredShopId,
   setStoredToken,
 } from '@/lib/lineAuthStorage';
+import { auth } from '@/lib/firebase';
+import { signInWithCustomToken } from 'firebase/auth';
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -97,6 +99,22 @@ export default function LiffBridge() {
         if (data?.token) {
           setStoredToken(data.token);
           setStoredShopId(data.shopId || '');
+          try {
+            const firebaseRes = await fetch(`${base}/auth/line/firebase`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${data.token}`,
+              },
+              body: JSON.stringify({ shopId: data.shopId || shopIdParam || undefined }),
+            });
+            const firebaseData = await firebaseRes.json();
+            if (firebaseRes.ok && firebaseData?.firebaseToken) {
+              await signInWithCustomToken(auth, firebaseData.firebaseToken);
+            }
+          } catch (error) {
+            console.warn('Firebase sign-in (LIFF) failed', error);
+          }
         }
 
         setStatus('ready');
@@ -138,6 +156,22 @@ export default function LiffBridge() {
       if (data?.token) {
         setStoredToken(data.token);
         setStoredShopId(data.shopId || '');
+        try {
+          const firebaseRes = await fetch(`${base}/auth/line/firebase`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${data.token}`,
+            },
+            body: JSON.stringify({ shopId: data.shopId || selectedShopId }),
+          });
+          const firebaseData = await firebaseRes.json();
+          if (firebaseRes.ok && firebaseData?.firebaseToken) {
+            await signInWithCustomToken(auth, firebaseData.firebaseToken);
+          }
+        } catch (error) {
+          console.warn('Firebase sign-in (LIFF select) failed', error);
+        }
       }
       setShops([]);
       setMessage('เชื่อมต่อสำเร็จ');

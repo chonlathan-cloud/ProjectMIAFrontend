@@ -9,18 +9,40 @@ import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { getAiSettings, updateAiSettings } from '@/lib/api';
-import { getAuth, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import {
+  EmailAuthProvider,
+  getAuth,
+  linkWithCredential,
+  sendPasswordResetEmail,
+  updateEmail,
+  updatePassword,
+  updateProfile,
+} from 'firebase/auth';
 import { toast } from 'sonner';
 
 export function Settings() {
   const { user, store, setUser } = useStore();
   const navigate = useNavigate();
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+  const hasPasswordProvider = currentUser?.providerData?.some(
+    (provider) => provider.providerId === 'password'
+  );
   const [aiEnabled, setAiEnabled] = useState<boolean>(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linkPassword, setLinkPassword] = useState('');
+  const [linkPasswordConfirm, setLinkPasswordConfirm] = useState('');
+  const [linkingAuth, setLinkingAuth] = useState(false);
+  const [updateEmailValue, setUpdateEmailValue] = useState('');
+  const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
     if (!store?.id) return;
@@ -41,6 +63,12 @@ export function Settings() {
   useEffect(() => {
     setDisplayName(user?.name || '');
   }, [user?.name]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setLinkEmail(user.email);
+    setUpdateEmailValue(user.email);
+  }, [user?.email]);
 
   const handleToggleAi = async (next: boolean) => {
     if (!store?.id) return;
@@ -88,18 +116,140 @@ export function Settings() {
   };
 
   const handleResetPassword = async () => {
-    if (!user?.email) {
+    const email = user?.email || currentUser?.email;
+    if (!email) {
       toast.error('ไม่พบอีเมลผู้ใช้งาน');
       return;
     }
 
     try {
-      const auth = getAuth();
-      await sendPasswordResetEmail(auth, user.email);
+      await sendPasswordResetEmail(auth, email);
       toast.success('ส่งอีเมลสำหรับเปลี่ยนรหัสผ่านแล้ว');
     } catch (err: any) {
       console.error('send reset email failed:', err);
       toast.error(err?.message || 'ส่งอีเมลไม่สำเร็จ');
+    }
+  };
+
+  const handleLinkEmailPassword = async () => {
+    if (!linkEmail.trim()) {
+      toast.error('กรุณากรอกอีเมล');
+      return;
+    }
+    if (linkPassword.length < 6) {
+      toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    if (linkPassword !== linkPasswordConfirm) {
+      toast.error('รหัสผ่านไม่ตรงกัน');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
+    try {
+      setLinkingAuth(true);
+      const credential = EmailAuthProvider.credential(linkEmail.trim(), linkPassword);
+      await linkWithCredential(currentUser, credential);
+      await currentUser.reload();
+      const email = currentUser.email || linkEmail.trim();
+      if (user) {
+        setUser({ ...user, email });
+      }
+      setUpdateEmailValue(email);
+      setLinkPassword('');
+      setLinkPasswordConfirm('');
+      toast.success('ผูกอีเมลและรหัสผ่านสำเร็จ');
+    } catch (err: any) {
+      console.error('link email/password failed:', err);
+      const code = err?.code;
+      if (code === 'auth/email-already-in-use') {
+        toast.error('อีเมลนี้ถูกใช้งานแล้ว');
+      } else if (code === 'auth/credential-already-in-use') {
+        toast.error('บัญชีนี้ถูกเชื่อมกับผู้ใช้อื่นแล้ว');
+      } else if (code === 'auth/provider-already-linked') {
+        toast.error('บัญชีนี้ผูกอีเมลไว้แล้ว');
+      } else {
+        toast.error(err?.message || 'ผูกอีเมลไม่สำเร็จ');
+      }
+    } finally {
+      setLinkingAuth(false);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    const nextEmail = updateEmailValue.trim();
+    if (!nextEmail) {
+      toast.error('กรุณากรอกอีเมล');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
+    if (nextEmail === currentUser.email) {
+      toast.info('อีเมลยังเหมือนเดิม');
+      return;
+    }
+
+    try {
+      setUpdatingEmail(true);
+      await updateEmail(currentUser, nextEmail);
+      if (user) {
+        setUser({ ...user, email: nextEmail });
+      }
+      toast.success('อัปเดตอีเมลสำเร็จ');
+    } catch (err: any) {
+      console.error('update email failed:', err);
+      const code = err?.code;
+      if (code === 'auth/requires-recent-login') {
+        toast.error('ต้องเข้าสู่ระบบใหม่ก่อนเปลี่ยนอีเมล');
+      } else if (code === 'auth/email-already-in-use') {
+        toast.error('อีเมลนี้ถูกใช้งานแล้ว');
+      } else {
+        toast.error(err?.message || 'อัปเดตอีเมลไม่สำเร็จ');
+      }
+    } finally {
+      setUpdatingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      toast.error('รหัสผ่านไม่ตรงกัน');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
+    try {
+      setUpdatingPassword(true);
+      await updatePassword(currentUser, newPassword);
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      toast.success('ตั้งรหัสผ่านใหม่สำเร็จ');
+    } catch (err: any) {
+      console.error('update password failed:', err);
+      const code = err?.code;
+      if (code === 'auth/requires-recent-login') {
+        toast.error('ต้องเข้าสู่ระบบใหม่ก่อนเปลี่ยนรหัสผ่าน');
+      } else {
+        toast.error(err?.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
+      }
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -189,6 +339,101 @@ export function Settings() {
             <Button variant="outline" onClick={handleResetPassword}>
               เปลี่ยนรหัสผ่าน
             </Button>
+          </div>
+
+          <div className="pt-6 border-t space-y-4">
+            <div>
+              <p className="font-medium text-gray-900">เข้าสู่ระบบด้วยอีเมล/รหัสผ่าน</p>
+              <p className="text-sm text-gray-500">
+                ผูกอีเมลเพื่อเข้าใช้งานผ่านเบราว์เซอร์ปกติได้
+              </p>
+            </div>
+
+            {hasPasswordProvider ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">อีเมลที่ผูก</label>
+                    <Input value={currentUser?.email || user?.email || ''} disabled />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">อีเมลใหม่ (ถ้าต้องการเปลี่ยน)</label>
+                    <Input
+                      value={updateEmailValue}
+                      onChange={(event) => setUpdateEmailValue(event.target.value)}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
+                <Button variant="outline" onClick={handleUpdateEmail} disabled={updatingEmail}>
+                  {updatingEmail ? 'กำลังอัปเดต...' : 'อัปเดตอีเมล'}
+                </Button>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">รหัสผ่านใหม่</label>
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">ยืนยันรหัสผ่านใหม่</label>
+                    <Input
+                      type="password"
+                      value={newPasswordConfirm}
+                      onChange={(event) => setNewPasswordConfirm(event.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={handleUpdatePassword} disabled={updatingPassword}>
+                    {updatingPassword ? 'กำลังบันทึก...' : 'ตั้งรหัสผ่านใหม่'}
+                  </Button>
+                  <Button variant="outline" onClick={handleResetPassword}>
+                    ส่งลิงก์รีเซ็ตรหัสผ่าน
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1">
+                    <label className="text-sm text-gray-500">อีเมล (Gmail)</label>
+                    <Input
+                      type="email"
+                      value={linkEmail}
+                      onChange={(event) => setLinkEmail(event.target.value)}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">รหัสผ่าน</label>
+                    <Input
+                      type="password"
+                      value={linkPassword}
+                      onChange={(event) => setLinkPassword(event.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">ยืนยันรหัสผ่าน</label>
+                    <Input
+                      type="password"
+                      value={linkPasswordConfirm}
+                      onChange={(event) => setLinkPasswordConfirm(event.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleLinkEmailPassword} disabled={linkingAuth}>
+                  {linkingAuth ? 'กำลังผูกอีเมล...' : 'ผูกอีเมลและตั้งรหัสผ่าน'}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

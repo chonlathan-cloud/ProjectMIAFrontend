@@ -7,6 +7,7 @@ import {
 } from '@/lib/lineAuthStorage';
 import { auth } from '@/lib/firebase';
 import { signInWithCustomToken } from 'firebase/auth';
+import { getLineCredentials } from '@/lib/api';
 
 export default function LineLogin() {
   const [status, setStatus] = useState<'loading' | 'error' | 'redirect'>('loading');
@@ -52,6 +53,23 @@ export default function LineLogin() {
           }
         } catch (error) {
           console.warn('Firebase sign-in (LINE login) failed', error);
+        }
+        try {
+          const creds = await getLineCredentials(shopId);
+          const info = (creds as any)?.data ?? creds;
+          const connected = Boolean(info?.channelAccessToken || info?.lineAccountId);
+          if (!connected) {
+            setStatus('redirect');
+            setMessage('กำลังพาไปตั้งค่า Line OA...');
+            window.location.replace('/settings/store');
+            return;
+          }
+        } catch (error) {
+          console.warn('Line OA check failed', error);
+          setStatus('redirect');
+          setMessage('กำลังพาไปตั้งค่า Line OA...');
+          window.location.replace('/settings/store');
+          return;
         }
         setStatus('redirect');
         setMessage('กำลังพาไปหน้า AI Chat...');

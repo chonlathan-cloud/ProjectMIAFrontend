@@ -6,6 +6,7 @@ import {
   setStoredShopId,
   setStoredToken,
 } from '@/lib/lineAuthStorage';
+import { getLineCredentials } from '@/lib/api';
 import { auth } from '@/lib/firebase';
 import { signInWithCustomToken } from 'firebase/auth';
 
@@ -114,6 +115,24 @@ export default function LiffBridge() {
             }
           } catch (error) {
             console.warn('Firebase sign-in (LIFF) failed', error);
+          }
+          const resolvedShopId = data.shopId || shopIdParam || '';
+          if (resolvedShopId) {
+            try {
+              const creds = await getLineCredentials(resolvedShopId);
+              const info = (creds as any)?.data ?? creds;
+              const connected = Boolean(
+                info?.channelAccessToken || info?.lineAccountId
+              );
+              if (!connected) {
+                window.location.replace('/settings/store');
+                return;
+              }
+            } catch (error) {
+              console.warn('Line OA check failed', error);
+              window.location.replace('/settings/store');
+              return;
+            }
           }
         }
 
